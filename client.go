@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/gorilla/websocket"
 )
 
@@ -15,9 +13,9 @@ type client struct {
 	room *room
 }
 
+// WE NEED TO GIVE THE GAME_ENGINE ACCESS TO THIS, OR ADD A FUNCTION HERE TO MAKE GAME ACTION
 func (c *client) read() {
 	defer c.socket.Close()
-	fmt.Println("reading...")
 	for {
 		_, msg, err := c.socket.ReadMessage()
 		if err != nil {

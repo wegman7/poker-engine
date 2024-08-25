@@ -1,11 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
 )
+
+var engines = make(map[string]*engine)
 
 type room struct {
 	clients map[*client]bool
@@ -19,10 +22,10 @@ type room struct {
 
 func newRoom() *room {
 	return &room{
-		forward:  make(chan []byte),
+		clients: make(map[*client]bool),
+		forward: make(chan []byte),
 		join:    make(chan *client),
 		leave:   make(chan *client),
-		clients: make(map[*client]bool),
 	}
 }
 
@@ -48,19 +51,53 @@ const (
 
 var upgrader = &websocket.Upgrader{ReadBufferSize: socketBufferSize, WriteBufferSize: socketBufferSize}
 
+func onDisconnect(e *engine) {
+    fmt.Println("OnDisconnect called")
+	e.running = false
+	// e.socket.Close()
+}
+
 func (r *room) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	socket, err := upgrader.Upgrade(w, req, nil)
+
 	if err != nil {
 		log.Fatal("Serve http: ", err)
 		return
 	}
-	client := &client{
-		socket: socket,
-		receive: make(chan []byte, messageBufferSize),
-		room: r,
+
+	params := req.URL.Query()
+	roomName := params.Get("room_name")
+
+	var engine *engine
+	engine, exists := engines[roomName]
+	if exists {
+		fmt.Println("Engine already exists for room ", roomName)
+		engine.running = true
+		engine.socket = socket
+		go engine.run()
+	} else {
+		fmt.Println("Creating new engine for room ", roomName)
+		engine = startEngine(socket)
+		engines[roomName] = engine
 	}
-	r.join <- client
-	defer func() { r.leave <- client }()
-	go client.write()
-	client.read()
+	
+	closeHandler := socket.CloseHandler()
+	socket.SetCloseHandler(func(code int, text string) error {
+		// Add your code here ...
+		fmt.Println("WebSocket disconnected, stopping engine ", roomName)
+		onDisconnect(engine)
+		err := closeHandler(code, text)
+		// ... or here.
+		return err
+	})
+
+	// client := &client{
+	// 	socket: socket,
+	// 	receive: make(chan []byte, messageBufferSize),
+	// 	room: r,
+	// }
+	// r.join <- client
+	// defer func() { r.leave <- client }()
+	// go client.write()
+	// client.read()
 }

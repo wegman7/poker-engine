@@ -9,19 +9,20 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var SLEEP_TIME = 200 * time.Millisecond
+var SLEEP_TIME = 5000 * time.Millisecond
 
 type engine struct {
 	conn *websocket.Conn
-	gameCommands [][]byte
-	state state
+	commands *[][]byte
+	state *state
 }
 
 func createEngine(conn *websocket.Conn) *engine {
+	commands := make([][]byte, 0)
 	return &engine{
 		conn: conn,
-		gameCommands: make([][]byte, 0),
-		state: *createState(),
+		commands: &commands,
+		state: createState(),
 	}
 }
 
@@ -39,23 +40,25 @@ func (e *engine) run(stopEngine chan struct{}) {
 	}
 }
 
-func (e engine) tick() {
-	return
-}
-
-func (e engine) queueGameCommand() {
-	for {
-		_, msg, err := e.conn.ReadMessage()
-		if err != nil {
-			return
-		}
-		e.gameCommands = append(e.gameCommands, msg)
-		fmt.Println("adding command to queue", string(e.gameCommands[0]))
+func (e *engine) tick() {
+	// copy e.commands so it doesn't change while we're iterating
+	commandsCopy := *e.commands
+	*e.commands = make([][]byte, 0)
+	for _, command := range commandsCopy {
+		e.processCommand(command)
 	}
 }
 
+func (e *engine) queueCommand(command []byte) {
+	*e.commands = append(*e.commands, command)
+}
+
+func(e *engine) processCommand(commandBytes []byte) {
+	command := string(commandBytes)
+	fmt.Println(command)
+}
+
 func (e engine) sendState() {
-	fmt.Println("sending state...", e)
 	serializePlayer := SerializePlayer{
 		SeatId: "1",
 	}

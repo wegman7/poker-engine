@@ -39,9 +39,6 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
             log.Println("ReadMessage:", err)
             break
         }
-		// add command to queue
-		fmt.Println("adding command to queue", string(message))
+		e.queueCommand(message)
     }
 }
-
-// FINISH MOVING THIS TO A FUNCTION FROM A METHOD

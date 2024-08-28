@@ -1,49 +1,42 @@
 package main
 
 import (
-	"fmt"
-	"time"
-	"github.com/gorilla/websocket"
 	"encoding/json"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 var SLEEP_TIME = 200 * time.Millisecond
 
 type engine struct {
-	socket *websocket.Conn
+	conn *websocket.Conn
 	gameCommands [][]byte
 	state state
-	running bool
 }
 
-func startEngine(socket *websocket.Conn) *engine {
-	e := &engine{
-		socket: socket,
+func createEngine(conn *websocket.Conn) *engine {
+	return &engine{
+		conn: conn,
 		gameCommands: make([][]byte, 0),
 		state: *createState(),
-		running: true,
 	}
-
-	i := 0
-	for i < 10 {
-		fmt.Println("sending hello")
-		time.Sleep(SLEEP_TIME)
-		e.socket.WriteMessage(websocket.TextMessage, []byte("hello"))
-		i++
-	}
-	// go e.run()
-	// go e.queueGameCommand()
-
-	return e
 }
 
-func (e *engine) run() {
-	for e.running {
-		time.Sleep(SLEEP_TIME)
-		e.tick()
-		e.sendState()
+func (e *engine) run(stopEngine chan struct{}) {
+	for {
+		select {
+		case <-stopEngine:
+			log.Println("Goroutine stopped as WebSocket is closed.")
+            return
+		default:
+			time.Sleep(SLEEP_TIME)
+			e.tick()
+			e.sendState()
+		}
 	}
-	fmt.Println("Engine stopped")
 }
 
 func (e engine) tick() {
@@ -52,7 +45,7 @@ func (e engine) tick() {
 
 func (e engine) queueGameCommand() {
 	for {
-		_, msg, err := e.socket.ReadMessage()
+		_, msg, err := e.conn.ReadMessage()
 		if err != nil {
 			return
 		}
@@ -62,7 +55,7 @@ func (e engine) queueGameCommand() {
 }
 
 func (e engine) sendState() {
-	fmt.Println("sending state...", e.running, e)
+	fmt.Println("sending state...", e)
 	serializePlayer := SerializePlayer{
 		SeatId: "1",
 	}
@@ -77,5 +70,5 @@ func (e engine) sendState() {
 	if err != nil {
 		return
 	}
-	e.socket.WriteMessage(websocket.TextMessage, responseMsg)
+	e.conn.WriteMessage(websocket.TextMessage, responseMsg)
 }

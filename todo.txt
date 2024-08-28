@@ -1,0 +1,10 @@
+# remove rooms and make it simple, then start on game engine!
+
+# finish off gamestate tick with method to queue game commands, process game commands, and then create a method to stop the engine
+# start building player fields and methods
+# start building state fields and methods
+
+# why is disconnecting taking so long? I think the issue has something to do with "defer ws.Close()"
+#   also, how is the current main.go handleConnections function not getting stuck in an infinite loop?
+
+# should we put the handleWebsockets function as a method in the engine object?

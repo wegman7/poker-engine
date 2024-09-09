@@ -5,6 +5,7 @@ type SerializePlayer struct {
 }
 
 type SerializeState struct {
-    Type string    `json:"type"`
+    ChannelCommand string    `json:"channelCommand"`
+    RoomName string    `json:"roomName"`
     Players map[string]SerializePlayer `json:"data"`
 }

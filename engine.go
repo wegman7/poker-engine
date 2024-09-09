@@ -9,20 +9,23 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var SLEEP_TIME = 5000 * time.Millisecond
+var SLEEP_TIME = 100 * time.Millisecond
 
 type engine struct {
 	conn *websocket.Conn
-	commands *[][]byte
+	gameCommands []map[string]string
+	sitCommands []map[string]string
 	state *state
+	roomName string
 }
 
-func createEngine(conn *websocket.Conn) *engine {
-	commands := make([][]byte, 0)
+func createEngine(conn *websocket.Conn, roomName string, bigBlind float64) *engine {
 	return &engine{
 		conn: conn,
-		commands: &commands,
-		state: createState(),
+		gameCommands: make([]map[string]string, 0),
+		sitCommands: make([]map[string]string, 0),
+		state: createState(bigBlind, 60),
+		roomName: roomName,
 	}
 }
 
@@ -41,21 +44,37 @@ func (e *engine) run(stopEngine chan struct{}) {
 }
 
 func (e *engine) tick() {
-	// copy e.commands so it doesn't change while we're iterating
-	commandsCopy := *e.commands
-	*e.commands = make([][]byte, 0)
-	for _, command := range commandsCopy {
-		e.processCommand(command)
+	if e.state.betweenHands {
+		e.processSitCommand()
+	} else {
+		e.processGameCommand()
 	}
 }
 
-func (e *engine) queueCommand(command []byte) {
-	*e.commands = append(*e.commands, command)
+func (e *engine) queueCommand(command map[string]string) {
+	if command["engineCommand"] == "fold" || command["engineCommand"] == "check"  || command["engineCommand"] == "call" || command["engineCommand"] == "bet" {
+		e.gameCommands = append(e.gameCommands, command)
+	} else {
+		e.sitCommands = append(e.sitCommands, command)
+	}
 }
 
-func(e *engine) processCommand(commandBytes []byte) {
-	command := string(commandBytes)
-	fmt.Println(command)
+func (e *engine) processSitCommand() {
+	// copy e.commands so it doesn't change while we're iterating
+	commandsCopy := e.sitCommands
+	e.sitCommands = make([]map[string]string, 0)
+	for _, command := range commandsCopy {
+		fmt.Println("processing sit command: ", command)
+	}
+}
+
+func(e *engine) processGameCommand() {
+	// copy e.commands so it doesn't change while we're iterating
+	commandsCopy := e.gameCommands
+	e.gameCommands = make([]map[string]string, 0)
+	for _, command := range commandsCopy {
+		fmt.Println("processing game command: ", command)
+	}
 }
 
 func (e engine) sendState() {
@@ -63,7 +82,8 @@ func (e engine) sendState() {
 		SeatId: "1",
 	}
 	serializeState := SerializeState{
-		Type: "gamestate",
+		ChannelCommand: "sendState",
+		RoomName: e.roomName,
 		Players: map[string]SerializePlayer{
 			"player1": serializePlayer,
 		},
@@ -74,4 +94,5 @@ func (e engine) sendState() {
 		return
 	}
 	e.conn.WriteMessage(websocket.TextMessage, responseMsg)
+	fmt.Println("Sending state...")
 }

@@ -1,10 +1,37 @@
 what do we want engine to be able to do?
-    - join
-    - 
-    - sitin/standup (for now don't worry about doing this while in a hand)
-    - 
 
-technical details:
+Player
+    Attributes:
+        - seat_id
+        - user
+        - sitting_out
+        - chips
+        - chips_in_pot
+        - time_bank
+        - hole_cards
 
-engine:
-    - 
+    Methods:
+        Queue that is processed between hands
+        - join (with chips)
+        - leave
+        - sitin/standup/addchips (make separate queue for between hands)
+
+        Queue that is processed during hands
+        - bet/call/check/fold
+
+State
+    Attributes
+        - time_bank_total
+        - players (dict user: player or seat_id: player)
+        - spotlight (linked list of players still in hand)
+        - spotlightBetweenHands (linked list of all players)
+        - between_hands (bool)
+
+Engine
+    - queue game_action
+    - process game_action
+    - queue sit_action
+    - process sit_action
+
+
+# add joinGame functionality, finish changing naming on python side

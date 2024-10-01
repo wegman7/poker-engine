@@ -1,37 +1,37 @@
-package main
+package engine
 
 import (
 	"github.com/chehsunliu/poker"
 )
 
-type player struct{
-	seatId int
-	user string
-	sittingOut bool
-	chips float64
-	chipsInPot float64
-	timeBank float64
-	holeCards []poker.Card
+type player struct {
+	seatId          int
+	user            string
+	sittingOut      bool
+	chips           float64
+	chipsInPot      float64
+	timeBank        float64
+	holeCards       []poker.Card
 	commandHandlers map[string]commandHandler
-	closesAction bool
-	nextPlayerInHand *player
-	nextPlayerOutOfHand *player
+	closesAction    bool
+	nextInHand      *player
+	next            *player
 }
 
 type commandHandler func(event Event) error
 
 func createPlayer(event Event) *player {
 	p := player{
-		seatId: event.SeatId,
-		user: event.User,
-		sittingOut: false,
-		chips: event.Chips,
-		chipsInPot: 0,
-		timeBank: 0,
-		holeCards: nil,
+		seatId:       event.SeatId,
+		user:         event.User,
+		sittingOut:   false,
+		chips:        event.Chips,
+		chipsInPot:   0,
+		timeBank:     0,
+		holeCards:    nil,
 		closesAction: false,
-		nextPlayerInHand: nil,
-		nextPlayerOutOfHand: nil,
+		nextInHand:   nil,
+		next:         nil,
 	}
 
 	p.commandHandlers = make(map[string]commandHandler)
@@ -85,16 +85,8 @@ func (p *player) bet(event Event) error {
 	return nil
 }
 
-func(p *player) postBlind(amount float64) error {
+func (p *player) postBlind(amount float64) error {
 	p.chipsInPot = p.chipsInPot + amount
 	p.chips = p.chips - amount
 	return nil
-}
-
-
-
-
-func MyTestFunc() int {
-	// my test func
-	return 3
 }

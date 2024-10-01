@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"encoding/json"
@@ -32,7 +32,7 @@ func deserializeMessage(message []byte) (Event, error) {
 	return event, nil
 }
 
-func createEngineConn(roomName string, smallBlind float64, bigBlind float64) {
+func CreateEngineConn(roomName string, smallBlind float64, bigBlind float64) {
 	url := fmt.Sprintf("ws://localhost:8000/ws/engineconsumer/%s/", roomName)
 
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)

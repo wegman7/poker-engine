@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"encoding/json"
@@ -12,20 +12,20 @@ import (
 var SLEEP_TIME = 100 * time.Millisecond
 
 type engine struct {
-	conn *websocket.Conn
+	conn         *websocket.Conn
 	gameCommands []Event
-	sitCommands []Event
-	state *state
-	roomName string
+	sitCommands  []Event
+	state        *state
+	roomName     string
 }
 
 func createEngine(conn *websocket.Conn, roomName string, smallBlind float64, bigBlind float64) *engine {
 	return &engine{
-		conn: conn,
+		conn:         conn,
 		gameCommands: make([]Event, 0),
-		sitCommands: make([]Event, 0),
-		state: createState(smallBlind, bigBlind, 60),
-		roomName: roomName,
+		sitCommands:  make([]Event, 0),
+		state:        createState(smallBlind, bigBlind, 60),
+		roomName:     roomName,
 	}
 }
 
@@ -34,7 +34,7 @@ func (e *engine) run(stopEngine chan struct{}) {
 		select {
 		case <-stopEngine:
 			log.Println("Goroutine stopped as WebSocket is closed.")
-            return
+			return
 		default:
 			time.Sleep(SLEEP_TIME)
 			e.tick()
@@ -52,7 +52,7 @@ func (e *engine) tick() {
 }
 
 func (e *engine) queueEvent(event Event) {
-	if event.EngineCommand == "fold" || event.EngineCommand == "check"  || event.EngineCommand == "call" || event.EngineCommand == "bet" {
+	if event.EngineCommand == "fold" || event.EngineCommand == "check" || event.EngineCommand == "call" || event.EngineCommand == "bet" {
 		e.gameCommands = append(e.gameCommands, event)
 	} else {
 		e.sitCommands = append(e.sitCommands, event)
@@ -80,7 +80,7 @@ func (e *engine) processSitCommand() {
 	}
 }
 
-func(e *engine) processGameCommand() {
+func (e *engine) processGameCommand() {
 	// copy e.commands so it doesn't change while we're iterating
 	commandsCopy := e.gameCommands
 	e.gameCommands = make([]Event, 0)
@@ -89,16 +89,16 @@ func(e *engine) processGameCommand() {
 	}
 }
 
-func(e *engine) startHand() {
+func (e *engine) startHand() {
 	e.state.betweenHands = false
 	e.postBlinds()
-	e.state.spotlight = e.state.dealer.nextPlayerInHand.nextPlayerInHand
+	e.state.spotlight = e.state.dealer.nextInHand.nextInHand
 }
 
-func(e *engine) postBlinds() {
-	smallBlindPlayer := e.state.dealer.nextPlayerInHand
+func (e *engine) postBlinds() {
+	smallBlindPlayer := e.state.dealer.nextInHand
 	smallBlindPlayer.postBlind(e.state.smallBlind)
-	bigBlindPlayer := e.state.dealer.nextPlayerInHand.nextPlayerInHand
+	bigBlindPlayer := e.state.dealer.nextInHand.nextInHand
 	bigBlindPlayer.postBlind(e.state.bigBlind)
 }
 
@@ -108,7 +108,7 @@ func (e engine) sendState() {
 	if err != nil {
 		return
 	}
-	
+
 	e.conn.WriteMessage(websocket.TextMessage, responseMsg)
 	fmt.Println("Sending state...")
 }

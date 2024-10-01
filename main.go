@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"github.com/wegman7/game-engine/engine"
 )
 
 type StartGameRequest struct {
@@ -31,7 +32,7 @@ func startEngineHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(responseData)
 
-	go createEngineConn(req.RoomName, req.BigBlind, req.BigBlind)
+	go engine.CreateEngineConn(req.RoomName, req.BigBlind, req.BigBlind)
 }
 
 func main() {

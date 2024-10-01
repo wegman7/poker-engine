@@ -32,6 +32,18 @@ Engine
     - process game_action
     - queue sit_action
     - process sit_action
+    - start hand
+    - decide if game should start
+    - post blinds
+    - deal hand
+    - end street
+    - deal flop
+    - deal turn
+    - deal river
+    - payout
+    - rank hands
+    - end hand (move dealer chip etc)
 
 
-# add joinGame functionality, finish changing naming on python side
+# change the state and player structs to uppercase so they can be exported
+# should we put engine, state, player, etc into their own modules? so we can imort them easier for tests? or maybe just put them all in an engine module?

@@ -4,76 +4,64 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/gorilla/websocket"
 )
 
-const (
-	socketBufferSize  = 1024
-	messageBufferSize = 1024
-)
-
-var upgrader = &websocket.Upgrader{ReadBufferSize: socketBufferSize, WriteBufferSize: socketBufferSize}
-
-func parseRequestParams(req *http.Request) (string, float64, error) {
-	// Extract roomName from the path
-	roomName := strings.TrimPrefix(req.URL.Path, "/ws/")
-
-	// Extract bigBlind from the query parameters and convert to float64
-	query := req.URL.Query()
-	bigBlind := query.Get("bigBlind")
-	bigBlindFloat, err := strconv.ParseFloat(bigBlind, 64)
-	if err != nil {
-		return "", 0, fmt.Errorf("failed to convert bigBlind to float64: %w", err)
-	}
-
-	return roomName, bigBlindFloat, nil
+type Event struct {
+    EngineCommand string  `json:"engineCommand"`
+    SeatId        int     `json:"seatId"`
+	User          string  `json:"user"`
+	Chips         float64 `json:"chips"`
 }
 
-func ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	conn, err := upgrader.Upgrade(w, req, nil)
+func closeConn(conn *websocket.Conn, stopEngine chan struct{}) {
+	// stop engine goroutine
+	close(stopEngine)
+	fmt.Println("stopping engine")
+	conn.Close()
+}
+
+func deserializeMessage(message []byte) (Event, error) {
+	event := Event{}
+	err := json.Unmarshal(message, &event)
 	if err != nil {
-		log.Fatal("Serve http: ", err)
-		return
+		return event, err
+	}
+	fmt.Println("Decoded message:", event)
+	return event, nil
+}
+
+func createEngineConn(roomName string, smallBlind float64, bigBlind float64) {
+	url := fmt.Sprintf("ws://localhost:8000/ws/engineconsumer/%s/", roomName)
+
+	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+	if err != nil {
+		log.Fatal("dial:", err)
 	}
 
-	roomName, bigBlindFloat, err := parseRequestParams(req)
-	if err != nil {
-		log.Fatal("Failed to parse request params: ", err)
-		return
-	}
-	e := createEngine(conn, roomName, bigBlindFloat)
-
+	e := createEngine(conn, roomName, smallBlind, bigBlind)
 	stopEngine := make(chan struct{})
 	go e.run(stopEngine)
+    defer closeConn(conn, stopEngine)
 
-    defer func() {
-		// stop engine goroutine
-		close(stopEngine)
-		fmt.Println("stopping engine")
-        conn.Close()
-    }()
     for {
         _, message, err := conn.ReadMessage()
+		fmt.Println("message: ", string(message))
         if err != nil {
             log.Println("ReadMessage:", err)
             break
         }
 
-		// Declare a map to hold the decoded data
-		var messageMap map[string]string
-
-		// Unmarshal (convert) the JSON into the map
-		err2 := json.Unmarshal(message, &messageMap)
-		if err2 != nil {
-			fmt.Println("Error decoding JSON:", err2)
+		event, err := deserializeMessage(message)
+		if err != nil {
+			fmt.Println("Error decoding JSON:", err)
 			return
 		}
+		if event.EngineCommand == "stopEngine" {
+			break
+		}
 
-		fmt.Println("new message: ", messageMap)
-		e.queueCommand(messageMap)
+		e.queueEvent(event)
     }
 }

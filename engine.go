@@ -13,18 +13,18 @@ var SLEEP_TIME = 100 * time.Millisecond
 
 type engine struct {
 	conn *websocket.Conn
-	gameCommands []map[string]string
-	sitCommands []map[string]string
+	gameCommands []Event
+	sitCommands []Event
 	state *state
 	roomName string
 }
 
-func createEngine(conn *websocket.Conn, roomName string, bigBlind float64) *engine {
+func createEngine(conn *websocket.Conn, roomName string, smallBlind float64, bigBlind float64) *engine {
 	return &engine{
 		conn: conn,
-		gameCommands: make([]map[string]string, 0),
-		sitCommands: make([]map[string]string, 0),
-		state: createState(bigBlind, 60),
+		gameCommands: make([]Event, 0),
+		sitCommands: make([]Event, 0),
+		state: createState(smallBlind, bigBlind, 60),
 		roomName: roomName,
 	}
 }
@@ -51,48 +51,64 @@ func (e *engine) tick() {
 	}
 }
 
-func (e *engine) queueCommand(command map[string]string) {
-	if command["engineCommand"] == "fold" || command["engineCommand"] == "check"  || command["engineCommand"] == "call" || command["engineCommand"] == "bet" {
-		e.gameCommands = append(e.gameCommands, command)
+func (e *engine) queueEvent(event Event) {
+	if event.EngineCommand == "fold" || event.EngineCommand == "check"  || event.EngineCommand == "call" || event.EngineCommand == "bet" {
+		e.gameCommands = append(e.gameCommands, event)
 	} else {
-		e.sitCommands = append(e.sitCommands, command)
+		e.sitCommands = append(e.sitCommands, event)
 	}
 }
 
 func (e *engine) processSitCommand() {
 	// copy e.commands so it doesn't change while we're iterating
 	commandsCopy := e.sitCommands
-	e.sitCommands = make([]map[string]string, 0)
+	e.sitCommands = make([]Event, 0)
 	for _, command := range commandsCopy {
 		fmt.Println("processing sit command: ", command)
+		seatId := command.SeatId
+
+		if command.EngineCommand == "join" {
+			p := createPlayer(command)
+			e.state.addPlayer(p)
+		} else if command.EngineCommand == "leave" {
+			e.state.removePlayer(e.state.players[seatId])
+		} else if command.EngineCommand == "startGame" {
+			e.startHand()
+		} else {
+			e.state.players[seatId].makeAction(command)
+		}
 	}
 }
 
 func(e *engine) processGameCommand() {
 	// copy e.commands so it doesn't change while we're iterating
 	commandsCopy := e.gameCommands
-	e.gameCommands = make([]map[string]string, 0)
+	e.gameCommands = make([]Event, 0)
 	for _, command := range commandsCopy {
 		fmt.Println("processing game command: ", command)
 	}
 }
 
-func (e engine) sendState() {
-	serializePlayer := SerializePlayer{
-		SeatId: "1",
-	}
-	serializeState := SerializeState{
-		ChannelCommand: "sendState",
-		RoomName: e.roomName,
-		Players: map[string]SerializePlayer{
-			"player1": serializePlayer,
-		},
-	}
+func(e *engine) startHand() {
+	e.state.betweenHands = false
+	e.postBlinds()
+	e.state.spotlight = e.state.dealer.nextPlayerInHand.nextPlayerInHand
+}
 
+func(e *engine) postBlinds() {
+	smallBlindPlayer := e.state.dealer.nextPlayerInHand
+	smallBlindPlayer.postBlind(e.state.smallBlind)
+	bigBlindPlayer := e.state.dealer.nextPlayerInHand.nextPlayerInHand
+	bigBlindPlayer.postBlind(e.state.bigBlind)
+}
+
+func (e engine) sendState() {
+	serializeState := createSerializeState(e.state)
 	responseMsg, err := json.Marshal(serializeState)
 	if err != nil {
 		return
 	}
+	
 	e.conn.WriteMessage(websocket.TextMessage, responseMsg)
 	fmt.Println("Sending state...")
 }

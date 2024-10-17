@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -28,7 +27,6 @@ func TestDealCards(t *testing.T) {
 
 	pointer := e.state.dealer.nextInHand
 	for {
-		fmt.Println(pointer.holeCards)
 		if len(pointer.holeCards) != 2 {
 			t.Error("Expected 2 hole cards, got", len(pointer.holeCards))
 		}

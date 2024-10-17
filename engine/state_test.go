@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -219,9 +218,11 @@ func TestResetPlayersInHand(t *testing.T) {
     s.addPlayer(p3)
     s.addPlayer(p4)
     s.addPlayer(p5)
-    
-    s.orderPlayersInHand()
-    fmt.Println(s.printPlayersInHand())
+
+    s.performDealerRotation()
     s.resetPlayersInHand()
-    fmt.Println(s.printPlayersInHand())
+    
+    if s.printPlayersInHand() != "No players" {
+        t.Errorf("Expected No players, got %v", s.printPlayersInHand())
+    }
 }

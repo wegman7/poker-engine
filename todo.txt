@@ -45,3 +45,5 @@ Engine
     - end hand (move dealer chip etc)
 
 
+    - start making game commands
+    - change django sockets to use channel name instead of sending commands to entire room

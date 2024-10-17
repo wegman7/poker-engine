@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/chehsunliu/poker"
 	"github.com/gorilla/websocket"
 )
 
@@ -44,10 +45,10 @@ func (e *engine) run(stopEngine chan struct{}) {
 }
 
 func (e *engine) tick() {
-	if e.state.betweenHands {
-		e.processSitCommand()
-	} else {
+	if e.state.handInAction {
 		e.processGameCommand()
+	} else {
+		e.processSitCommand()
 	}
 }
 
@@ -90,16 +91,39 @@ func (e *engine) processGameCommand() {
 }
 
 func (e *engine) startHand() {
-	e.state.betweenHands = false
+	if err := e.state.performDealerRotation(); err != nil {
+		log.Println("Error rotating dealer: ", err)
+		return
+	}
 	e.postBlinds()
-	e.state.spotlight = e.state.dealer.nextInHand.nextInHand
+	e.dealCards()
+	e.state.handInAction = true
 }
 
 func (e *engine) postBlinds() {
-	smallBlindPlayer := e.state.dealer.nextInHand
-	smallBlindPlayer.postBlind(e.state.smallBlind)
-	bigBlindPlayer := e.state.dealer.nextInHand.nextInHand
-	bigBlindPlayer.postBlind(e.state.bigBlind)
+	playerCount := e.state.countPlayersInHand()
+	// when a hand is heads up, the dealer posts the sb and goes first preflop
+	if playerCount == 2 {
+		e.state.dealer.postBlind(e.state.smallBlind)
+		e.state.dealer.nextInHand.postBlind(e.state.bigBlind)
+		e.state.spotlight = e.state.dealer
+		return
+	}
+	e.state.dealer.nextInHand.postBlind(e.state.smallBlind)
+	e.state.dealer.nextInHand.nextInHand.postBlind(e.state.bigBlind)
+	e.state.spotlight = e.state.dealer.nextInHand.nextInHand.nextInHand
+}
+
+func (e *engine) dealCards() {
+	deck := poker.NewDeck()
+	pointer := e.state.dealer.nextInHand
+	for {
+		pointer.holeCards = deck.Draw(2)
+		if pointer == e.state.dealer {
+			break
+		}
+		pointer = pointer.nextInHand
+	}
 }
 
 func (e engine) sendState() {

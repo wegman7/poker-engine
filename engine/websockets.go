@@ -28,7 +28,6 @@ func deserializeMessage(message []byte) (Event, error) {
 	if err != nil {
 		return event, err
 	}
-	fmt.Println("Decoded message:", event)
 	return event, nil
 }
 
@@ -47,9 +46,8 @@ func CreateEngineConn(roomName string, smallBlind float64, bigBlind float64) {
 
     for {
         _, message, err := conn.ReadMessage()
-		fmt.Println("message: ", string(message))
         if err != nil {
-            log.Println("ReadMessage:", err)
+            log.Println("ReadMessage error:", err)
             break
         }
 

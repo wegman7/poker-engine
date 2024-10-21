@@ -28,7 +28,7 @@ func createState(smallBlind float64, bigBlind float64, timebankTotal float64) *s
 		players:               make(map[int]*player),
 		spotlight:             nil,
 		spotlightBetweenHands: nil,
-		handInAction:          true,
+		handInAction:          false,
 		dealer:                nil,
 		deck:				   nil,
 		communityCards:		   nil,
@@ -86,6 +86,23 @@ func (s *state) resetPlayersInHand() {
 		pointer = pointer.next
 		if pointer == s.dealer {
 			return
+		}
+	}
+}
+
+func (s *state) sitoutBustedPlayers() error {
+	if s.dealer == nil {
+		return errors.New("dealer is nil")
+	}
+
+	pointer := s.dealer
+	for {
+		if pointer.chips == 0 {
+			pointer.sittingOut = true
+		}
+		pointer = pointer.next
+		if pointer == s.dealer {
+			return nil
 		}
 	}
 }
@@ -173,6 +190,10 @@ func (s *state) orderPlayersInHand() error {
 }
 
 func (s *state) performDealerRotation() error {
+	if err := s.sitoutBustedPlayers(); err != nil {
+		return err
+	}
+
     if err := s.validateMinimumPlayersInHand(); err != nil {
         return err
     }

@@ -10,9 +10,10 @@ type SerializePlayer struct {
 	ChipsInPot float64  `json:"chipsInPot"`
 	TimeBank float64 `json:"timeBank"`
 	HoleCards []poker.Card `json:"holeCards"`
+    Spotlight bool `json:"spotlight"`
 }
 
-func createSerializePlayer(p *player) SerializePlayer {
+func createSerializePlayer(p *player, s *state) SerializePlayer {
     return SerializePlayer{
         SeatId: p.seatId,
         User: p.user,
@@ -21,6 +22,7 @@ func createSerializePlayer(p *player) SerializePlayer {
         ChipsInPot: p.chipsInPot,
         TimeBank: p.timeBank,
         HoleCards: p.holeCards,
+        Spotlight: p == s.spotlight,
     }
 
 }
@@ -36,7 +38,7 @@ type SerializeState struct {
 func createSerializeState(s *state) SerializeState {
     serializePlayers := make(map[int]SerializePlayer)
     for seatId, player := range s.players {
-        serializePlayers[seatId] = createSerializePlayer(player)
+        serializePlayers[seatId] = createSerializePlayer(player, s)
     }
 
     return SerializeState{

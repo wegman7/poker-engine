@@ -27,7 +27,7 @@ func startEngineHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	responseData := StartGameResponse{
-		Message: fmt.Sprintf("Started egnine for room %s", req.RoomName),
+		Message: fmt.Sprintf("Started engine for room %s", req.RoomName),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(responseData)

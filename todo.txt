@@ -45,5 +45,7 @@ Engine
     - end hand (move dealer chip etc)
 
 
-    - start making game commands
-    - change django sockets to use channel name instead of sending commands to entire room
+    - change players from seatId: player to user: player
+    - then make sure we know which player joins first so that it will be consistent which player has the spotlight first each hand
+    - then keep making player actions and adding as needed
+    - also might make sense to go ahead and write the backend logic first and test with unit tests, then add the integration tests from the frontend

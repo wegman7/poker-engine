@@ -52,6 +52,7 @@ func (p *player) makeAction(event Event) {
 
 // Add chips to the player's total
 func (p *player) addChips(event Event) error {
+	p.chips = p.chips + event.Chips
 	return nil
 }
 

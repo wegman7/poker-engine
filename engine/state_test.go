@@ -91,6 +91,27 @@ func TestAddRemovePlayer(t *testing.T) {
     }
 }
 
+func TestSitOutBustedPlayers(t *testing.T) {
+    s := createState(1, 2, 30)
+
+    p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
+    p2 := createPlayer(Event{SeatId: 5, User: "user1", Chips: 0})
+    p3 := createPlayer(Event{SeatId: 8, User: "user1", Chips: 100})
+
+    s.addPlayer(p1)
+    s.addPlayer(p2)
+    s.addPlayer(p3)
+
+    err := s.sitoutBustedPlayers()
+    if err != nil {
+        t.Errorf("Expected nil, got %s", err.Error())
+    }
+
+    if p1.sittingOut || !p2.sittingOut || p3.sittingOut {
+        t.Errorf("Expected p1 to be sitting out, got %v, %v, %v", p1.sittingOut, p2.sittingOut, p3.sittingOut)
+    }
+}
+
 func TestValidateMinimumPlayersInHand(t *testing.T) {
     s := createState(1, 2, 30)
 

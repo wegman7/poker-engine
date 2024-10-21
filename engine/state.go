@@ -11,7 +11,7 @@ type state struct {
 	smallBlind            float64
 	bigBlind              float64
 	timebankTotal         float64
-	players               map[int]*player
+	players               map[string]*player
 	spotlight             *player
 	spotlightBetweenHands *player
 	handInAction          bool
@@ -25,7 +25,7 @@ func createState(smallBlind float64, bigBlind float64, timebankTotal float64) *s
 		smallBlind:            smallBlind,
 		bigBlind:              bigBlind,
 		timebankTotal:         timebankTotal,
-		players:               make(map[int]*player),
+		players:               make(map[string]*player),
 		spotlight:             nil,
 		spotlightBetweenHands: nil,
 		handInAction:          false,
@@ -36,7 +36,7 @@ func createState(smallBlind float64, bigBlind float64, timebankTotal float64) *s
 }
 
 func (s *state) addPlayer(p *player) {
-	s.players[p.seatId] = p
+	s.players[p.user] = p
 	if s.dealer == nil {
 		s.dealer = p
 		p.next = p
@@ -61,7 +61,7 @@ func (s *state) addPlayer(p *player) {
 }
 
 func (s *state) removePlayer(p *player) {
-	delete(s.players, p.seatId)
+	delete(s.players, p.user)
 	if s.dealer.next == s.dealer {
 		s.dealer = nil
 		return

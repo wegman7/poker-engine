@@ -37,8 +37,8 @@ type SerializeState struct {
 
 func createSerializeState(s *state) SerializeState {
     serializePlayers := make(map[int]SerializePlayer)
-    for seatId, player := range s.players {
-        serializePlayers[seatId] = createSerializePlayer(player, s)
+    for _, player := range s.players {
+        serializePlayers[player.seatId] = createSerializePlayer(player, s)
     }
 
     return SerializeState{

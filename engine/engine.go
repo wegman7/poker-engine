@@ -66,17 +66,17 @@ func (e *engine) processSitCommand() {
 	e.sitCommands = make([]Event, 0)
 	for _, command := range commandsCopy {
 		fmt.Println("processing sit command: ", command)
-		seatId := command.SeatId
+		user := command.User
 
 		if command.EngineCommand == "join" {
 			p := createPlayer(command)
 			e.state.addPlayer(p)
 		} else if command.EngineCommand == "leave" {
-			e.state.removePlayer(e.state.players[seatId])
+			e.state.removePlayer(e.state.players[user])
 		} else if command.EngineCommand == "startGame" {
 			e.startHand()
 		} else {
-			e.state.players[seatId].makeAction(command)
+			e.state.players[user].makeAction(command)
 		}
 	}
 }

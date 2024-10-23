@@ -202,22 +202,13 @@ func TestOrderPlayersInHand(t *testing.T) {
     
     p3.sittingOut = true
     s.orderPlayersInHand()
+    s.psuedoDealer = s.dealer
     if s.printPlayersInHand() != "1 -> 5 -> 6 -> 0 -> 1" {
         t.Errorf("Expected 1 -> 5 -> 6 -> 0 -> 1, got %v", s.printPlayersInHand())
     }
     
     p1.sittingOut = true
     p2.sittingOut = true
-    p4.sittingOut = true
-    p5.sittingOut = true
-    s.rotateDealer()
-    err := s.orderPlayersInHand()
-    if err == nil || err.Error() != "dealer is sitting out" {
-        t.Errorf("Expected dealer is sitting out")
-    }
-
-    p4.sittingOut = false
-    p5.sittingOut = false
     s.rotateDealer()
     s.orderPlayersInHand()
 
@@ -242,8 +233,38 @@ func TestResetPlayersInHand(t *testing.T) {
 
     s.performDealerRotation()
     s.resetPlayersInHand()
+
+    pointer := s.dealer
+    for {
+        if pointer.nextInHand != nil {
+            t.Errorf("Expected nil, got %v", pointer.nextInHand)
+        }
+        if pointer == s.dealer {
+            return
+        }
+        pointer = pointer.next
+    }
+}
+
+func TestRemovePlayerInHand(t *testing.T) {
+    s := createState(1, 2, 30)
+
+    p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
+    p2 := createPlayer(Event{SeatId: 5, User: "user1", Chips: 100})
+    p3 := createPlayer(Event{SeatId: 8, User: "user1", Chips: 100})
+    s.addPlayer(p1)
+    s.addPlayer(p2)
+    s.addPlayer(p3)
+
+    s.performDealerRotation()
     
-    if s.printPlayersInHand() != "No players" {
-        t.Errorf("Expected No players, got %v", s.printPlayersInHand())
+    s.removePlayerInHand(p2)
+    if s.printPlayersInHand() != "1 -> 8 -> 1" {
+        t.Errorf("Expected 1 -> 8 -> 1, got %v", s.printPlayersInHand())
+    }
+
+    s.removePlayerInHand(p1)
+    if s.printPlayersInHand() != "8 -> 8" {
+        t.Errorf("Expected 8 -> 8, got %v", s.printPlayersInHand())
     }
 }

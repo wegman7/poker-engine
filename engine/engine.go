@@ -47,6 +47,9 @@ func (e *engine) run(stopEngine chan struct{}) {
 func (e *engine) tick() {
 	if e.state.handInAction {
 		e.processGameCommand()
+		if e.isStreetComplete() {
+			e.endStreet()
+		}
 	} else {
 		e.processSitCommand()
 	}
@@ -76,7 +79,7 @@ func (e *engine) processSitCommand() {
 		} else if command.EngineCommand == "startGame" {
 			e.startHand()
 		} else {
-			e.state.players[user].makeAction(command)
+			e.state.players[user].makeAction(command, e, e.state)
 		}
 	}
 }
@@ -124,6 +127,38 @@ func (e *engine) dealCards() {
 		}
 		pointer = pointer.nextInHand
 	}
+}
+
+func (e *engine) isStreetComplete() bool {
+	return e.state.spotlight == e.state.lastAggressor
+}
+
+func (e *engine) isEveryoneFolded() bool {
+	return e.state.countPlayersInHand() == 1
+}
+
+func (e *engine) endStreet() {
+	// check if we have enough players to continue
+
+	e.state.spotlight = e.state.dealer
+	e.state.lastAggressor = nil
+	// deal next street, might need to add street as state attribute
+}
+
+func (e *engine) dealStreet() {
+	// deal next street
+}
+
+func (e *engine) showdown() {
+	// determine winner
+}
+
+func (e *engine) payout() {
+	// should call endHand
+}
+
+func (e *engine) endHand() {
+	// the opposite of startHand
 }
 
 func (e engine) sendState() {

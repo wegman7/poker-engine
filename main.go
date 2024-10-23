@@ -32,7 +32,7 @@ func startEngineHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(responseData)
 
-	go engine.CreateEngineConn(req.RoomName, req.BigBlind, req.BigBlind)
+	go engine.CreateEngineConn(req.RoomName, req.SmallBlind, req.BigBlind)
 }
 
 func main() {

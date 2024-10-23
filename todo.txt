@@ -33,9 +33,10 @@ Engine
     - queue sit_action
     - process sit_action
     - start hand
-    - decide if game should start
     - post blinds
     - deal hand
+    - determine if street is complete
+    - determine if hand is complete
     - end street
     - deal flop
     - deal turn
@@ -45,7 +46,8 @@ Engine
     - end hand (move dealer chip etc)
 
 
-    - change players from seatId: player to user: player
     - then make sure we know which player joins first so that it will be consistent which player has the spotlight first each hand
     - then keep making player actions and adding as needed
     - also might make sense to go ahead and write the backend logic first and test with unit tests, then add the integration tests from the frontend
+
+    - need to add a check after a player folds to see if there's enough active players to continue. need to consider if players are all in as well

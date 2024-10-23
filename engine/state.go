@@ -13,9 +13,11 @@ type state struct {
 	timebankTotal         float64
 	players               map[string]*player
 	spotlight             *player
-	spotlightBetweenHands *player
 	handInAction          bool
 	dealer                *player
+	psuedoDealer		  *player
+	lastAggressor		  *player
+	street			  	  string
 	deck				  *poker.Deck
 	communityCards		  []poker.Card
 }
@@ -27,9 +29,11 @@ func createState(smallBlind float64, bigBlind float64, timebankTotal float64) *s
 		timebankTotal:         timebankTotal,
 		players:               make(map[string]*player),
 		spotlight:             nil,
-		spotlightBetweenHands: nil,
 		handInAction:          false,
 		dealer:                nil,
+		psuedoDealer:		   nil,
+		lastAggressor:		   nil,
+		street:				   "",
 		deck:				   nil,
 		communityCards:		   nil,
 	}
@@ -79,6 +83,34 @@ func (s *state) removePlayer(p *player) {
 	}
 }
 
+// move the psuedo dealer to the next previous in hand
+func (s *state) movePsuedoDealer() {
+	pointer := s.psuedoDealer
+	for {
+		if pointer.nextInHand == s.psuedoDealer {
+			s.psuedoDealer = pointer
+			return
+		}
+		pointer = pointer.nextInHand
+	}
+}
+
+func (s *state) removePlayerInHand(p *player) {
+	if s.psuedoDealer == p {
+		s.movePsuedoDealer()
+	}
+
+	pointer := p
+	for {
+		if pointer.nextInHand == p {
+			pointer.nextInHand = p.nextInHand
+			p.nextInHand = nil
+			return
+		}
+		pointer = pointer.nextInHand
+	}
+}
+
 func (s *state) resetPlayersInHand() {
 	pointer := s.dealer
 	for {
@@ -112,17 +144,7 @@ func (s *state) validateMinimumPlayersInHand() error {
 		return errors.New("dealer is nil")
 	}
 
-	count := 0
-	pointer := s.dealer
-	for {
-		if !pointer.sittingOut {
-			count++
-		}
-		pointer = pointer.next
-		if pointer == s.dealer {
-			break
-		}
-	}
+	count := s.countPlayersInHand()
 
 	if count < 2 {
 		return errors.New("not enough players in hand")
@@ -158,6 +180,7 @@ func (s *state) rotateDealer() error {
 		}
 		if !pointer.sittingOut {
 			s.dealer = pointer
+			s.psuedoDealer = pointer
 			return nil
 		}
 	}
@@ -227,16 +250,12 @@ func (s *state) printPlayers() string {
 }
 
 func (s *state) printPlayersInHand() string {
-	if s.dealer == nil || s.dealer.sittingOut || s.dealer.nextInHand == nil {
-		return "No players"
-	}
-
 	result := ""
-	pointer := s.dealer
+	pointer := s.psuedoDealer
 	for {
 		result += fmt.Sprint(pointer.seatId) + " -> "
 		pointer = pointer.nextInHand
-		if pointer == s.dealer {
+		if pointer == s.psuedoDealer {
 			result += fmt.Sprint(pointer.seatId)
 			break
 		}

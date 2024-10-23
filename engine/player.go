@@ -13,12 +13,11 @@ type player struct {
 	timeBank        float64
 	holeCards       []poker.Card
 	commandHandlers map[string]commandHandler
-	closesAction    bool
 	nextInHand      *player
 	next            *player
 }
 
-type commandHandler func(event Event) error
+type commandHandler func(event Event, e *engine, s *state) error
 
 func createPlayer(event Event) *player {
 	p := player{
@@ -29,7 +28,6 @@ func createPlayer(event Event) *player {
 		chipsInPot:   0,
 		timeBank:     0,
 		holeCards:    nil,
-		closesAction: false,
 		nextInHand:   nil,
 		next:         nil,
 	}
@@ -46,43 +44,50 @@ func createPlayer(event Event) *player {
 	return &p
 }
 
-func (p *player) makeAction(event Event) {
-	p.commandHandlers[event.EngineCommand](event)
+func (p *player) makeAction(event Event, e *engine, s *state) error {
+	p.commandHandlers[event.EngineCommand](event, e, s)
+	return nil
 }
 
 // Add chips to the player's total
-func (p *player) addChips(event Event) error {
+func (p *player) addChips(event Event, e *engine, s *state) error {
 	p.chips = p.chips + event.Chips
 	return nil
 }
 
 // Add chips to the player's total
-func (p *player) sitOut(event Event) error {
+func (p *player) sitOut(event Event, e *engine, s *state) error {
+	p.sittingOut = true
 	return nil
 }
 
 // Add chips to the player's total
-func (p *player) sitIn(event Event) error {
+func (p *player) sitIn(event Event, e *engine, s *state) error {
+	p.sittingOut = false
 	return nil
 }
 
 // Add chips to the player's total
-func (p *player) fold(event Event) error {
+func (p *player) fold(event Event, e *engine, s *state) error {
+	s.removePlayerInHand(p)
+	if e.isEveryoneFolded() {
+		e.payout()
+	}
 	return nil
 }
 
 // Add chips to the player's total
-func (p *player) check(event Event) error {
+func (p *player) check(event Event, e *engine, s *state) error {
 	return nil
 }
 
 // Add chips to the player's total
-func (p *player) call(event Event) error {
+func (p *player) call(event Event, e *engine, s *state) error {
 	return nil
 }
 
 // Add chips to the player's total
-func (p *player) bet(event Event) error {
+func (p *player) bet(event Event, e *engine, s *state) error {
 	return nil
 }
 

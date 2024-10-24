@@ -35,8 +35,9 @@ Engine
     - start hand
     - post blinds
     - deal hand
-    - determine if street is complete
-    - determine if hand is complete
+    - rotate spotlight (this will handle triggering the next street, skipping players that are all in)
+    - is hand over (is only one player left)
+    - is street complete (called from rotate spotlight)
     - end street
     - deal flop
     - deal turn
@@ -46,8 +47,6 @@ Engine
     - end hand (move dealer chip etc)
 
 
-    - then make sure we know which player joins first so that it will be consistent which player has the spotlight first each hand
-    - then keep making player actions and adding as needed
-    - also might make sense to go ahead and write the backend logic first and test with unit tests, then add the integration tests from the frontend
-
-    - need to add a check after a player folds to see if there's enough active players to continue. need to consider if players are all in as well
+    - we need to write a list of all the game pauses we want, then use finite stat machine concepts to write blocks of code that will execute separate from our game loop
+        - we can use goroutines for them to execute independently and not block our game loop, but pausing the game loop during these animation blocks will be MUCH simpler
+    - DEFINITELY need to use fsm to simplify managing state

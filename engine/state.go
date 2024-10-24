@@ -18,6 +18,7 @@ type state struct {
 	psuedoDealer		  *player
 	lastAggressor		  *player
 	street			  	  string
+	pot					  float64
 	deck				  *poker.Deck
 	communityCards		  []poker.Card
 }
@@ -34,6 +35,7 @@ func createState(smallBlind float64, bigBlind float64, timebankTotal float64) *s
 		psuedoDealer:		   nil,
 		lastAggressor:		   nil,
 		street:				   "",
+		pot:				   0.0,
 		deck:				   nil,
 		communityCards:		   nil,
 	}
@@ -165,6 +167,10 @@ func (s *state) countPlayersInHand() int {
 		}
 	}
 	return count
+}
+
+func (s *state) isEveryoneFolded() bool {
+	return s.countPlayersInHand() == 1
 }
 
 func (s *state) rotateDealer() error {

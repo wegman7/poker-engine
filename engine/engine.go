@@ -12,6 +12,16 @@ import (
 
 var SLEEP_TIME = 100 * time.Millisecond
 
+type engineState int
+
+const (
+	StateProcessSitCommands engineState = iota
+	StateProcessGameCommands
+	StateStartHand
+	StateEndStreet
+	StateEveryoneFolded
+)
+
 type engine struct {
 	conn         *websocket.Conn
 	gameCommands []Event
@@ -45,6 +55,7 @@ func (e *engine) run(stopEngine chan struct{}) {
 }
 
 func (e *engine) tick() {
+	// use states here
 	if e.state.handInAction {
 		e.processGameCommand()
 		if e.isStreetComplete() {
@@ -133,8 +144,17 @@ func (e *engine) isStreetComplete() bool {
 	return e.state.spotlight == e.state.lastAggressor
 }
 
-func (e *engine) isEveryoneFolded() bool {
-	return e.state.countPlayersInHand() == 1
+func (e *engine) everyoneFolded() {
+	winner := e.state.psuedoDealer
+
+	chips := 0.0
+	for _, player := range e.state.players {
+		chips += player.chipsInPot
+		player.chipsInPot = 0
+	}
+	chips += e.state.pot
+
+	winner.chips += chips
 }
 
 func (e *engine) endStreet() {

@@ -70,8 +70,8 @@ func (p *player) sitIn(event Event, e *engine, s *state) error {
 // Add chips to the player's total
 func (p *player) fold(event Event, e *engine, s *state) error {
 	s.removePlayerInHand(p)
-	if e.isEveryoneFolded() {
-		e.payout()
+	if s.isEveryoneFolded() {
+		e.everyoneFolded()
 	}
 	return nil
 }

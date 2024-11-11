@@ -7,37 +7,45 @@ import (
 	"github.com/chehsunliu/poker"
 )
 
+type street int
+
+const (
+	BetweenHands street = iota
+	Preflop
+	Flop
+	Turn
+	River
+)
+
 type state struct {
-	smallBlind            float64
-	bigBlind              float64
-	timebankTotal         float64
-	players               map[string]*player
-	spotlight             *player
-	handInAction          bool
-	dealer                *player
-	psuedoDealer		  *player
-	lastAggressor		  *player
-	street			  	  string
-	pot					  float64
-	deck				  *poker.Deck
-	communityCards		  []poker.Card
+	smallBlind     float64
+	bigBlind       float64
+	timebankTotal  float64
+	players        map[string]*player
+	spotlight      *player
+	dealer         *player
+	psuedoDealer   *player
+	lastAggressor  *player
+	street         street
+	pot            float64
+	deck           *poker.Deck
+	communityCards []poker.Card
 }
 
 func createState(smallBlind float64, bigBlind float64, timebankTotal float64) *state {
 	return &state{
-		smallBlind:            smallBlind,
-		bigBlind:              bigBlind,
-		timebankTotal:         timebankTotal,
-		players:               make(map[string]*player),
-		spotlight:             nil,
-		handInAction:          false,
-		dealer:                nil,
-		psuedoDealer:		   nil,
-		lastAggressor:		   nil,
-		street:				   "",
-		pot:				   0.0,
-		deck:				   nil,
-		communityCards:		   nil,
+		smallBlind:     smallBlind,
+		bigBlind:       bigBlind,
+		timebankTotal:  timebankTotal,
+		players:        make(map[string]*player),
+		spotlight:      nil,
+		dealer:         nil,
+		psuedoDealer:   nil,
+		lastAggressor:  nil,
+		street:         BetweenHands,
+		pot:            0.0,
+		deck:           nil,
+		communityCards: nil,
 	}
 }
 
@@ -113,15 +121,30 @@ func (s *state) removePlayerInHand(p *player) {
 	}
 }
 
-func (s *state) resetPlayersInHand() {
+func (s *state) resetDeck() {
+	s.deck = nil
+	for _, player := range s.players {
+		player.holeCards = nil
+	}
+}
+
+func (s *state) resetPlayers() {
 	pointer := s.dealer
 	for {
 		pointer.nextInHand = nil
+		pointer.holeCards = nil
+
 		pointer = pointer.next
 		if pointer == s.dealer {
 			return
 		}
 	}
+}
+
+func (s *state) resetState() {
+	s.resetPlayers()
+	s.resetDeck()
+	s.spotlight = nil
 }
 
 func (s *state) sitoutBustedPlayers() error {
@@ -141,12 +164,12 @@ func (s *state) sitoutBustedPlayers() error {
 	}
 }
 
-func (s *state) validateMinimumPlayersInHand() error {
+func (s *state) validateMinimumPlayersSittingIn() error {
 	if s.dealer == nil {
 		return errors.New("dealer is nil")
 	}
 
-	count := s.countPlayersInHand()
+	count := s.countPlayersSittingIn()
 
 	if count < 2 {
 		return errors.New("not enough players in hand")
@@ -154,7 +177,7 @@ func (s *state) validateMinimumPlayersInHand() error {
 	return nil
 }
 
-func (s *state) countPlayersInHand() int {
+func (s *state) countPlayersSittingIn() int {
 	count := 0
 	pointer := s.dealer
 	for {
@@ -169,8 +192,29 @@ func (s *state) countPlayersInHand() int {
 	return count
 }
 
+func (s *state) countPlayersInHand() int {
+	count := 0
+	if s.psuedoDealer == nil {
+		return count
+	}
+
+	pointer := s.psuedoDealer
+	for {
+		count++
+		pointer = pointer.nextInHand
+		if pointer == s.psuedoDealer {
+			break
+		}
+	}
+	return count
+}
+
 func (s *state) isEveryoneFolded() bool {
 	return s.countPlayersInHand() == 1
+}
+
+func (s *state) isStreetComplete() bool {
+	return s.spotlight == s.lastAggressor
 }
 
 func (s *state) rotateDealer() error {
@@ -223,19 +267,19 @@ func (s *state) performDealerRotation() error {
 		return err
 	}
 
-    if err := s.validateMinimumPlayersInHand(); err != nil {
-        return err
-    }
+	if err := s.validateMinimumPlayersSittingIn(); err != nil {
+		return err
+	}
 
-    if err := s.rotateDealer(); err != nil {
-        return err
-    }
+	if err := s.rotateDealer(); err != nil {
+		return err
+	}
 
-    if err := s.orderPlayersInHand(); err != nil {
-        return err
-    }
+	if err := s.orderPlayersInHand(); err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func (s *state) printPlayers() string {

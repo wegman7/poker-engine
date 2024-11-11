@@ -10,16 +10,31 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var SLEEP_TIME = 100 * time.Millisecond
+var ENGINE_LOOP_PAUSE = 100 * time.Millisecond
+var PAUSE_SHORT = 100 * time.Millisecond
+var PAUSE_MEDIUM = 200 * time.Millisecond
+var PAUSE_LONG = 300 * time.Millisecond
 
 type engineState int
 
 const (
 	StateProcessSitCommands engineState = iota
-	StateProcessGameCommands
 	StateStartHand
+	StatePauseAfterStartHand
+	StatePostBlinds
+	StatePauseAfterPostBlinds
+	StateDealCards
+	StateProcessGameCommands
+	StatePauseAfterEveryoneFolded
+	StateEveryoneFoldedPayout
+	StatePauseAfterEveryoneFoldedPayout
 	StateEndStreet
-	StateEveryoneFolded
+	StatePauseAfterEndStreet
+	StatePayout
+	StatePauseAfterStatePayout
+	StateShowdownPayout
+	StateEndHand
+	StateDealNextStreet
 )
 
 type engine struct {
@@ -28,6 +43,7 @@ type engine struct {
 	sitCommands  []Event
 	state        *state
 	roomName     string
+	engineState  engineState
 }
 
 func createEngine(conn *websocket.Conn, roomName string, smallBlind float64, bigBlind float64) *engine {
@@ -37,17 +53,19 @@ func createEngine(conn *websocket.Conn, roomName string, smallBlind float64, big
 		sitCommands:  make([]Event, 0),
 		state:        createState(smallBlind, bigBlind, 60),
 		roomName:     roomName,
+		engineState:  StateProcessSitCommands,
 	}
 }
 
 func (e *engine) run(stopEngine chan struct{}) {
+	e.transitionState(StateProcessSitCommands)
 	for {
 		select {
 		case <-stopEngine:
 			log.Println("Goroutine stopped as WebSocket is closed.")
 			return
 		default:
-			time.Sleep(SLEEP_TIME)
+			time.Sleep(ENGINE_LOOP_PAUSE)
 			e.tick()
 			e.sendState()
 		}
@@ -56,14 +74,37 @@ func (e *engine) run(stopEngine chan struct{}) {
 
 func (e *engine) tick() {
 	// use states here
-	if e.state.handInAction {
-		e.processGameCommand()
-		if e.isStreetComplete() {
-			e.endStreet()
-		}
-	} else {
+	switch e.engineState {
+	case StateProcessSitCommands:
 		e.processSitCommand()
+	case StateProcessGameCommands:
+		e.processGameCommand()
+	case StateStartHand:
+		e.startHand()
+	case StatePauseAfterStartHand:
+		e.pauseAfterStartHand()
+	case StatePostBlinds:
+		e.postBlinds()
+	case StatePauseAfterPostBlinds:
+		e.pauseAfterPostBlinds()
+	case StateDealCards:
+		e.dealCards()
+	case StateEndStreet:
+		e.endStreet()
+	case StatePauseAfterEveryoneFolded:
+		e.pauseAfterEveryoneFolded()
+	case StateEveryoneFoldedPayout:
+		e.everyoneFoldedPayout()
+	case StatePauseAfterEveryoneFoldedPayout:
+		e.pauseAfterEveryoneFoldedPayout()
+	case StateEndHand:
+		e.endHand()
 	}
+}
+
+func (e *engine) transitionState(newEngineState engineState) {
+	log.Println("Transitioning state from", e.engineState, "to", newEngineState)
+	e.engineState = newEngineState
 }
 
 func (e *engine) queueEvent(event Event) {
@@ -88,7 +129,7 @@ func (e *engine) processSitCommand() {
 		} else if command.EngineCommand == "leave" {
 			e.state.removePlayer(e.state.players[user])
 		} else if command.EngineCommand == "startGame" {
-			e.startHand()
+			e.transitionState(StateStartHand)
 		} else {
 			e.state.players[user].makeAction(command, e, e.state)
 		}
@@ -101,6 +142,8 @@ func (e *engine) processGameCommand() {
 	e.gameCommands = make([]Event, 0)
 	for _, command := range commandsCopy {
 		fmt.Println("processing game command: ", command)
+		user := command.User
+		e.state.players[user].makeAction(command, e, e.state)
 	}
 }
 
@@ -109,23 +152,34 @@ func (e *engine) startHand() {
 		log.Println("Error rotating dealer: ", err)
 		return
 	}
-	e.postBlinds()
-	e.dealCards()
-	e.state.handInAction = true
+	e.transitionState(StatePauseAfterStartHand)
+}
+
+func (e *engine) pauseAfterStartHand() {
+	time.Sleep(5 * time.Second)
+	e.transitionState(StatePostBlinds)
 }
 
 func (e *engine) postBlinds() {
-	playerCount := e.state.countPlayersInHand()
+	playerCount := e.state.countPlayersSittingIn()
 	// when a hand is heads up, the dealer posts the sb and goes first preflop
 	if playerCount == 2 {
 		e.state.dealer.postBlind(e.state.smallBlind)
 		e.state.dealer.nextInHand.postBlind(e.state.bigBlind)
 		e.state.spotlight = e.state.dealer
+		e.transitionState(StatePauseAfterPostBlinds)
 		return
 	}
 	e.state.dealer.nextInHand.postBlind(e.state.smallBlind)
 	e.state.dealer.nextInHand.nextInHand.postBlind(e.state.bigBlind)
 	e.state.spotlight = e.state.dealer.nextInHand.nextInHand.nextInHand
+
+	e.transitionState(StatePauseAfterPostBlinds)
+}
+
+func (e *engine) pauseAfterPostBlinds() {
+	time.Sleep(5 * time.Second)
+	e.transitionState(StateDealCards)
 }
 
 func (e *engine) dealCards() {
@@ -138,13 +192,15 @@ func (e *engine) dealCards() {
 		}
 		pointer = pointer.nextInHand
 	}
+	e.transitionState(StateProcessGameCommands)
 }
 
-func (e *engine) isStreetComplete() bool {
-	return e.state.spotlight == e.state.lastAggressor
+func (e *engine) pauseAfterEveryoneFolded() {
+	time.Sleep(PAUSE_MEDIUM)
+	e.transitionState(StateEveryoneFoldedPayout)
 }
 
-func (e *engine) everyoneFolded() {
+func (e *engine) everyoneFoldedPayout() {
 	winner := e.state.psuedoDealer
 
 	chips := 0.0
@@ -155,6 +211,12 @@ func (e *engine) everyoneFolded() {
 	chips += e.state.pot
 
 	winner.chips += chips
+	e.transitionState(StatePauseAfterEveryoneFoldedPayout)
+}
+
+func (e *engine) pauseAfterEveryoneFoldedPayout() {
+	time.Sleep(PAUSE_MEDIUM)
+	e.transitionState(StateEndHand)
 }
 
 func (e *engine) endStreet() {
@@ -178,7 +240,9 @@ func (e *engine) payout() {
 }
 
 func (e *engine) endHand() {
-	// the opposite of startHand
+	e.state.resetState()
+	e.processSitCommand()
+	e.transitionState(StateStartHand)
 }
 
 func (e engine) sendState() {

@@ -47,6 +47,8 @@ Engine
     - end hand (move dealer chip etc)
 
 
-    - we need to write a list of all the game pauses we want, then use finite stat machine concepts to write blocks of code that will execute separate from our game loop
-        - we can use goroutines for them to execute independently and not block our game loop, but pausing the game loop during these animation blocks will be MUCH simpler
-    - DEFINITELY need to use fsm to simplify managing state
+    - should we add some sort of gameMessage when sending state to explain what's happening?
+        - for example, something like "starting new hand", "two players to the flop", "player x won pot of $x with x hand"
+    - start thinking about how often to send state and how to keep track of players time (frontend or backend or combo of both?)
+    
+    - add player functionality for bet/call then start testing it

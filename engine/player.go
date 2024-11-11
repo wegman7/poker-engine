@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"errors"
+
 	"github.com/chehsunliu/poker"
 )
 
@@ -69,30 +71,65 @@ func (p *player) sitIn(event Event, e *engine, s *state) error {
 
 // Add chips to the player's total
 func (p *player) fold(event Event, e *engine, s *state) error {
+	if err := p.verifyLegalMove(e, s); err != nil {
+		return err
+	}
+
 	s.removePlayerInHand(p)
 	if s.isEveryoneFolded() {
-		e.everyoneFolded()
+		e.transitionState(StatePauseAfterEveryoneFolded)
 	}
 	return nil
 }
 
 // Add chips to the player's total
 func (p *player) check(event Event, e *engine, s *state) error {
+	if err := p.verifyLegalMove(e, s); err != nil {
+		return err
+	}
+
+	s.spotlight = s.spotlight.nextInHand
+	if s.isStreetComplete() {
+		e.transitionState(StateEndStreet)
+	}
+
 	return nil
 }
 
 // Add chips to the player's total
 func (p *player) call(event Event, e *engine, s *state) error {
+	if err := p.verifyLegalMove(e, s); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // Add chips to the player's total
 func (p *player) bet(event Event, e *engine, s *state) error {
+	if err := p.verifyLegalMove(e, s); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (p *player) postBlind(amount float64) error {
 	p.chipsInPot = p.chipsInPot + amount
 	p.chips = p.chips - amount
+	return nil
+}
+
+func (p *player) verifyLegalMove(e *engine, s *state) error {
+	if err := p.verifySpotlight(e, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *player) verifySpotlight(e *engine, s *state) error {
+	if s.spotlight != p {
+		return errors.New("it is not your turn")
+	}
 	return nil
 }

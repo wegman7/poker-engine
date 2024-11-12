@@ -34,7 +34,7 @@ const (
 	StatePauseAfterStatePayout
 	StateShowdownPayout
 	StateEndHand
-	StateDealNextStreet
+	StateDealStreet
 )
 
 type engine struct {
@@ -89,10 +89,14 @@ func (e *engine) tick() {
 		e.pauseAfterPostBlinds()
 	case StateDealCards:
 		e.dealCards()
-	case StateEndStreet:
-		e.endStreet()
 	case StatePauseAfterEveryoneFolded:
 		e.pauseAfterEveryoneFolded()
+	case StateEndStreet:
+		e.endStreet()
+	case StatePauseAfterEndStreet:
+		e.pauseAfterEndStreet()
+	case StateDealStreet:
+		e.dealStreet()
 	case StateEveryoneFoldedPayout:
 		e.everyoneFoldedPayout()
 	case StatePauseAfterEveryoneFoldedPayout:
@@ -152,6 +156,7 @@ func (e *engine) startHand() {
 		log.Println("Error rotating dealer: ", err)
 		return
 	}
+	e.state.street = Preflop
 	e.transitionState(StatePauseAfterStartHand)
 }
 
@@ -161,18 +166,21 @@ func (e *engine) pauseAfterStartHand() {
 }
 
 func (e *engine) postBlinds() {
-	playerCount := e.state.countPlayersSittingIn()
-	// when a hand is heads up, the dealer posts the sb and goes first preflop
+	playerCount := e.state.countPlayersInHand()
+	var sb *player
+	var bb *player
 	if playerCount == 2 {
-		e.state.dealer.postBlind(e.state.smallBlind)
-		e.state.dealer.nextInHand.postBlind(e.state.bigBlind)
-		e.state.spotlight = e.state.dealer
-		e.transitionState(StatePauseAfterPostBlinds)
-		return
+		sb = e.state.dealer
+		bb = e.state.dealer.nextInHand
+		e.state.spotlight = sb
+	} else {
+		sb = e.state.dealer.nextInHand
+		bb = e.state.dealer.nextInHand.nextInHand
+		e.state.spotlight = bb.nextInHand
 	}
-	e.state.dealer.nextInHand.postBlind(e.state.smallBlind)
-	e.state.dealer.nextInHand.nextInHand.postBlind(e.state.bigBlind)
-	e.state.spotlight = e.state.dealer.nextInHand.nextInHand.nextInHand
+	sb.postBlind(e.state.smallBlind)
+	bb.postBlind(e.state.bigBlind)
+	e.state.lastAggressor = bb
 
 	e.transitionState(StatePauseAfterPostBlinds)
 }
@@ -220,15 +228,33 @@ func (e *engine) pauseAfterEveryoneFoldedPayout() {
 }
 
 func (e *engine) endStreet() {
-	// check if we have enough players to continue
+	e.transitionState(StatePauseAfterEndStreet)
+}
 
-	e.state.spotlight = e.state.dealer
-	e.state.lastAggressor = nil
-	// deal next street, might need to add street as state attribute
+func (e *engine) pauseAfterEndStreet() {
+	time.Sleep(PAUSE_MEDIUM)
+	if e.state.isStreetRiver() {
+		e.transitionState(StateShowdownPayout)
+	} else {
+		e.state.goToNextStreet()
+		e.transitionState(StateDealStreet)
+	}
+}
+
+func (e *engine) resetSpotlight() {
+	e.state.spotlight = e.state.psuedoDealer.nextInHand
+	e.state.lastAggressor = e.state.psuedoDealer
 }
 
 func (e *engine) dealStreet() {
-	// deal next street
+	var cards []poker.Card
+	if e.state.isStreetFlop() {
+		cards = append(cards, poker.NewDeck().Draw(3)...)
+	}
+	e.state.communityCards = append(e.state.communityCards, cards...)
+
+	e.resetSpotlight()
+	e.transitionState(StateProcessGameCommands)
 }
 
 func (e *engine) showdown() {
@@ -245,7 +271,12 @@ func (e *engine) endHand() {
 	e.transitionState(StateStartHand)
 }
 
-func (e engine) sendState() {
+func (e *engine) sendState() {
+	if !e.state.hasStateChanged() {
+		return
+	}
+	
+
 	serializeState := createSerializeState(e.state)
 	responseMsg, err := json.Marshal(serializeState)
 	if err != nil {

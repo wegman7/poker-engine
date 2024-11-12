@@ -30,6 +30,7 @@ type state struct {
 	pot            float64
 	deck           *poker.Deck
 	communityCards []poker.Card
+	prevState      *state
 }
 
 func createState(smallBlind float64, bigBlind float64, timebankTotal float64) *state {
@@ -46,8 +47,31 @@ func createState(smallBlind float64, bigBlind float64, timebankTotal float64) *s
 		pot:            0.0,
 		deck:           nil,
 		communityCards: nil,
+		prevState:      nil,
 	}
 }
+
+func (s *state) copy() *state {
+    copiedPlayers := make(map[string]*player, len(s.players))
+    for user, p := range s.players {
+        copiedPlayers[user] = p.copy()
+    }
+
+    return &state{
+        smallBlind:     s.smallBlind,
+        bigBlind:       s.bigBlind,
+        timebankTotal:  s.timebankTotal,
+        players:        copiedPlayers,
+        spotlight:      s.spotlight,
+        dealer:         s.dealer,
+        psuedoDealer:   s.psuedoDealer,
+        lastAggressor:  s.lastAggressor,
+        street:         s.street,
+        pot:            s.pot,
+        communityCards: append([]poker.Card{}, s.communityCards...),
+    }
+}
+
 
 func (s *state) addPlayer(p *player) {
 	s.players[p.user] = p
@@ -217,6 +241,25 @@ func (s *state) isStreetComplete() bool {
 	return s.spotlight == s.lastAggressor
 }
 
+func (s *state) isStreetRiver() bool {
+	return s.street == River
+}
+
+func (s *state) isStreetFlop() bool {
+	return s.street == Flop
+}
+
+func (s *state) goToNextStreet() {
+	switch s.street {
+	case Preflop:
+		s.street = Flop
+	case Flop:
+		s.street = Turn
+	case Turn:
+		s.street = River
+	}
+}
+
 func (s *state) rotateDealer() error {
 	if s.dealer == nil {
 		return errors.New("dealer is nil")
@@ -311,4 +354,44 @@ func (s *state) printPlayersInHand() string {
 		}
 	}
 	return result
+}
+
+func (s *state) hasStateChanged() bool {
+	prev := s.prevState
+	curr := s
+
+	if prev == nil {
+		s.prevState = curr.copy()
+		return true
+	}
+	s.prevState = curr.copy()
+
+	if prev.dealer != curr.dealer || 
+	   prev.psuedoDealer != curr.psuedoDealer || 
+	   prev.spotlight != curr.spotlight || 
+	   prev.street != curr.street || 
+	   prev.pot != curr.pot {
+		return true
+	}
+
+    if len(prev.players) != len(curr.players) {
+        return true
+    }
+
+    // compare players
+    for user, currPlayer := range curr.players {
+        prevPlayer, exists := prev.players[user]
+        if !exists || !comparePlayers(prevPlayer, currPlayer) {
+            return true
+        }
+    }
+
+    return false
+}
+
+func comparePlayers(prev *player, curr *player) bool {
+	return prev.sittingOut == curr.sittingOut &&
+		   prev.chips == curr.chips &&
+		   prev.chipsInPot == curr.chipsInPot &&
+		   prev.timeBank == curr.timeBank
 }

@@ -46,6 +46,19 @@ func createPlayer(event Event) *player {
 	return &p
 }
 
+func (p *player) copy() *player {
+    return &player{
+        seatId:      p.seatId,
+        user:        p.user,
+        sittingOut:  p.sittingOut,
+        chips:       p.chips,
+        chipsInPot:  p.chipsInPot,
+        timeBank:    p.timeBank,
+        holeCards:   append([]poker.Card{}, p.holeCards...),
+    }
+}
+
+
 func (p *player) makeAction(event Event, e *engine, s *state) error {
 	p.commandHandlers[event.EngineCommand](event, e, s)
 	return nil
@@ -88,9 +101,10 @@ func (p *player) check(event Event, e *engine, s *state) error {
 		return err
 	}
 
-	s.spotlight = s.spotlight.nextInHand
 	if s.isStreetComplete() {
 		e.transitionState(StateEndStreet)
+	} else {
+		s.spotlight = s.spotlight.nextInHand
 	}
 
 	return nil

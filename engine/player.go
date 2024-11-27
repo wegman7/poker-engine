@@ -12,6 +12,7 @@ type player struct {
 	sittingOut      bool
 	chips           float64
 	chipsInPot      float64
+	maxWin		  	float64
 	timeBank        float64
 	holeCards       []poker.Card
 	commandHandlers map[string]commandHandler
@@ -19,7 +20,7 @@ type player struct {
 	next            *player
 }
 
-type commandHandler func(event Event, e *engine, s *state) error
+type commandHandler func(event *Event, e *engine, s *state) error
 
 func createPlayer(event Event) *player {
 	p := player{
@@ -27,7 +28,8 @@ func createPlayer(event Event) *player {
 		user:         event.User,
 		sittingOut:   false,
 		chips:        event.Chips,
-		chipsInPot:   0,
+		chipsInPot:   0.0,
+		maxWin:       0.0,
 		timeBank:     0,
 		holeCards:    nil,
 		nextInHand:   nil,
@@ -59,32 +61,32 @@ func (p *player) copy() *player {
 }
 
 
-func (p *player) makeAction(event Event, e *engine, s *state) error {
-	p.commandHandlers[event.EngineCommand](event, e, s)
-	return nil
+func (p *player) makeAction(event *Event, e *engine, s *state) error {
+	err := p.commandHandlers[event.EngineCommand](event, e, s)
+	return err
 }
 
 // Add chips to the player's total
-func (p *player) addChips(event Event, e *engine, s *state) error {
+func (p *player) addChips(event *Event, e *engine, s *state) error {
 	p.chips = p.chips + event.Chips
 	return nil
 }
 
 // Add chips to the player's total
-func (p *player) sitOut(event Event, e *engine, s *state) error {
+func (p *player) sitOut(event *Event, e *engine, s *state) error {
 	p.sittingOut = true
 	return nil
 }
 
 // Add chips to the player's total
-func (p *player) sitIn(event Event, e *engine, s *state) error {
+func (p *player) sitIn(event *Event, e *engine, s *state) error {
 	p.sittingOut = false
 	return nil
 }
 
 // Add chips to the player's total
-func (p *player) fold(event Event, e *engine, s *state) error {
-	if err := p.verifyLegalMove(e, s); err != nil {
+func (p *player) fold(event *Event, e *engine, s *state) error {
+	if err := p.verifySpotlight(s); err != nil {
 		return err
 	}
 
@@ -96,54 +98,113 @@ func (p *player) fold(event Event, e *engine, s *state) error {
 }
 
 // Add chips to the player's total
-func (p *player) check(event Event, e *engine, s *state) error {
-	if err := p.verifyLegalMove(e, s); err != nil {
+func (p *player) check(event *Event, e *engine, s *state) error {
+	if err := p.verifySpotlight(s); err != nil {
 		return err
 	}
 
+	s.rotateSpotlight()
 	if s.isStreetComplete() {
 		e.transitionState(StateEndStreet)
-	} else {
-		s.spotlight = s.spotlight.nextInHand
+	}
+
+	return nil
+}
+
+func (p *player) call(event *Event, e *engine, s *state) error {
+	if err := p.verifySpotlight(s); err != nil {
+		return err
+	}
+	if err := p.verifyLegalCall(s, event.Chips); err != nil {
+		return err
+	}
+
+	amount := min(s.currentBet - p.chipsInPot, p.chips)
+	p.putChipsInPot(s, amount)
+
+	s.rotateSpotlight()
+	if s.isStreetComplete() {
+		e.transitionState(StateEndStreet)
 	}
 
 	return nil
 }
 
 // Add chips to the player's total
-func (p *player) call(event Event, e *engine, s *state) error {
-	if err := p.verifyLegalMove(e, s); err != nil {
+func (p *player) bet(event *Event, e *engine, s *state) error {
+	if err := p.verifySpotlight(s); err != nil {
+		return err
+	}
+	
+	betAmount := min(event.Chips - p.chipsInPot, p.chips)
+	if err := p.verifyLegalBet(s, betAmount); err != nil {
 		return err
 	}
 
-	return nil
-}
+	p.putChipsInPot(s, betAmount)
 
-// Add chips to the player's total
-func (p *player) bet(event Event, e *engine, s *state) error {
-	if err := p.verifyLegalMove(e, s); err != nil {
-		return err
-	}
+	s.minRaise = betAmount
+	s.lastAggressor = p
+	s.currentBet = p.chipsInPot
+	s.rotateSpotlight()
 
 	return nil
 }
 
-func (p *player) postBlind(amount float64) error {
-	p.chipsInPot = p.chipsInPot + amount
-	p.chips = p.chips - amount
-	return nil
+func (p *player) putChipsInPot(s *state, amount float64) {
+	s.pot += amount
+	p.chipsInPot += amount
+	p.chips -= amount
 }
 
-func (p *player) verifyLegalMove(e *engine, s *state) error {
-	if err := p.verifySpotlight(e, s); err != nil {
-		return err
-	}
-	return nil
+func (p *player) shouldCreateSidePot(amount float64) bool {
+	return amount > p.chipsInPot + p.chips
 }
 
-func (p *player) verifySpotlight(e *engine, s *state) error {
+func (p *player) isAllIn() bool {
+	return p.chips == 0
+}
+
+func (p *player) verifySpotlight(s *state) error {
 	if s.spotlight != p {
 		return errors.New("it is not your turn")
 	}
 	return nil
+}
+
+func (p *player) verifyLegalCall(s *state, betAmount float64) error {
+	if p.chipsInPot == s.currentBet {
+		return errors.New("player has already matched the bet")
+	}
+
+	return nil
+}
+
+func (p *player) verifyLegalBet(s *state, betAmount float64) error {
+	// if betAmount == p.chips then the player is all in and the bet is legal
+	if betAmount < s.minRaise && betAmount != p.chips {
+		return errors.New("bet amount is less than minimum")
+	}
+
+	return nil
+}
+
+func comparePlayers(prev *player, curr *player) bool {
+	// Check if the lengths of holeCards are different
+	if len(prev.holeCards) != len(curr.holeCards) {
+		return false
+	}
+
+	// Compare each card in holeCards
+	for i, card := range prev.holeCards {
+		if card != curr.holeCards[i] {
+			return false
+		}
+	}
+
+	// Compare other fields
+	return prev.sittingOut == curr.sittingOut &&
+		prev.chips == curr.chips &&
+		prev.chipsInPot == curr.chipsInPot &&
+		prev.timeBank == curr.timeBank
 }

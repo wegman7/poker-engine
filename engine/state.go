@@ -3,6 +3,8 @@ package engine
 import (
 	"errors"
 	"fmt"
+	"math"
+	"sort"
 
 	"github.com/chehsunliu/poker"
 )
@@ -28,6 +30,9 @@ type state struct {
 	lastAggressor  *player
 	street         street
 	pot            float64
+	collectedPot   float64
+	currentBet     float64
+	minRaise	   float64
 	deck           *poker.Deck
 	communityCards []poker.Card
 	prevState      *state
@@ -45,6 +50,9 @@ func createState(smallBlind float64, bigBlind float64, timebankTotal float64) *s
 		lastAggressor:  nil,
 		street:         BetweenHands,
 		pot:            0.0,
+		collectedPot:   0.0,
+		currentBet:     0.0,
+		minRaise:		0.0,
 		deck:           nil,
 		communityCards: nil,
 		prevState:      nil,
@@ -145,6 +153,12 @@ func (s *state) removePlayerInHand(p *player) {
 	}
 }
 
+func (s *state) removePlayersInHand(players []*player) {
+	for _, player := range players {
+		s.removePlayerInHand(player)
+	}
+}
+
 func (s *state) resetDeck() {
 	s.deck = nil
 	for _, player := range s.players {
@@ -233,6 +247,28 @@ func (s *state) countPlayersInHand() int {
 	return count
 }
 
+// this will keep track of the previous street's pot
+func (s *state) collectPot() {
+	s.collectedPot = s.pot
+}
+
+func (s *state) createSidePots() {
+	pointer := s.psuedoDealer
+	for {
+		if pointer.isAllIn() && pointer.chipsInPot <= s.currentBet {
+			pointer.maxWin = s.createSidePot(pointer)
+		}
+	}
+}
+
+func (s *state) createSidePot(hero *player) float64 {
+	maxWin := s.collectedPot
+	for _, villian := range s.players {
+		maxWin += min(hero.chipsInPot, villian.chipsInPot)
+	}
+	return maxWin
+}
+
 func (s *state) isEveryoneFolded() bool {
 	return s.countPlayersInHand() == 1
 }
@@ -257,6 +293,13 @@ func (s *state) goToNextStreet() {
 		s.street = Turn
 	case Turn:
 		s.street = River
+	}
+}
+
+func (s *state) rotateSpotlight() {
+	s.spotlight = s.spotlight.nextInHand
+	for s.spotlight.isAllIn() && s.spotlight != s.lastAggressor {
+		s.spotlight = s.spotlight.nextInHand
 	}
 }
 
@@ -325,6 +368,57 @@ func (s *state) performDealerRotation() error {
 	return nil
 }
 
+func (s *state) findBestHand() []*player {
+	bestHand := int32(math.MaxInt32)
+	winners := make([]*player, 0)
+
+	pointer := s.psuedoDealer
+	for pointer != s.psuedoDealer {
+		pointer = pointer.nextInHand
+		rank := poker.Evaluate(append(pointer.holeCards, s.communityCards...))
+
+		if rank < bestHand {
+			winners = make([]*player, 1)
+			winners[0] = pointer
+		// split pot
+		} else if rank == bestHand {
+			winners = append(winners, pointer)
+		}
+		bestHand = min(bestHand, rank)
+	}
+
+	return winners
+}
+
+func (s *state) payoutWinners(winners []*player) {
+	// takes in list of winner(s) and pays them out in order of maxWin asc
+	sortWinnersByMaxWin(winners)
+	for len(winners) > 0 {
+		smallestMaxWin := winners[0]
+		if smallestMaxWin.maxWin > 0 {
+			s.distributeChips(winners, smallestMaxWin.maxWin)
+		}
+
+		winners = winners[1:]
+	}
+}
+
+// sortWinnersByMaxWin sorts the winners slice by their maxWin in ascending order
+func sortWinnersByMaxWin(winners []*player) {
+	sort.Slice(winners, func(i, j int) bool {
+		return winners[i].maxWin < winners[j].maxWin
+	})
+}
+
+// distributeChips divides the chips from the smallest maxWin among all winners.
+func (s *state) distributeChips(winners []*player, amount float64) {
+	for _, winner := range winners {
+		winner.chips += amount / float64(len(winners))
+		winner.maxWin -= amount
+	}
+	s.pot -= amount
+}
+
 func (s *state) printPlayers() string {
 	if s.dealer == nil {
 		return "No players"
@@ -387,11 +481,4 @@ func (s *state) hasStateChanged() bool {
     }
 
     return false
-}
-
-func comparePlayers(prev *player, curr *player) bool {
-	return prev.sittingOut == curr.sittingOut &&
-		   prev.chips == curr.chips &&
-		   prev.chipsInPot == curr.chipsInPot &&
-		   prev.timeBank == curr.timeBank
 }

@@ -11,9 +11,9 @@ import (
 )
 
 var ENGINE_LOOP_PAUSE = 100 * time.Millisecond
-var PAUSE_SHORT = 100 * time.Millisecond
-var PAUSE_MEDIUM = 200 * time.Millisecond
-var PAUSE_LONG = 300 * time.Millisecond
+var PAUSE_SHORT = 1 * time.Millisecond
+var PAUSE_MEDIUM = 2 * time.Millisecond
+var PAUSE_LONG = 3 * time.Millisecond
 
 type engineState int
 
@@ -30,9 +30,8 @@ const (
 	StatePauseAfterEveryoneFoldedPayout
 	StateEndStreet
 	StatePauseAfterEndStreet
-	StatePayout
-	StatePauseAfterStatePayout
-	StateShowdownPayout
+	StateShowdown
+	StatePauseAfterShowdown
 	StateEndHand
 	StateDealStreet
 )
@@ -101,6 +100,10 @@ func (e *engine) tick() {
 		e.everyoneFoldedPayout()
 	case StatePauseAfterEveryoneFoldedPayout:
 		e.pauseAfterEveryoneFoldedPayout()
+	case StateShowdown:
+		e.showdown()
+	case StatePauseAfterShowdown:
+		e.pauseAfterShowdown()
 	case StateEndHand:
 		e.endHand()
 	}
@@ -135,7 +138,7 @@ func (e *engine) processSitCommand() {
 		} else if command.EngineCommand == "startGame" {
 			e.transitionState(StateStartHand)
 		} else {
-			e.state.players[user].makeAction(command, e, e.state)
+			e.state.players[user].makeAction(&command, e, e.state)
 		}
 	}
 }
@@ -147,7 +150,10 @@ func (e *engine) processGameCommand() {
 	for _, command := range commandsCopy {
 		fmt.Println("processing game command: ", command)
 		user := command.User
-		e.state.players[user].makeAction(command, e, e.state)
+		err := e.state.players[user].makeAction(&command, e, e.state)
+		if err != nil {
+			log.Println("Error processing game command: ", err)
+		}
 	}
 }
 
@@ -161,7 +167,7 @@ func (e *engine) startHand() {
 }
 
 func (e *engine) pauseAfterStartHand() {
-	time.Sleep(5 * time.Second)
+	time.Sleep(PAUSE_MEDIUM)
 	e.transitionState(StatePostBlinds)
 }
 
@@ -178,9 +184,12 @@ func (e *engine) postBlinds() {
 		bb = e.state.dealer.nextInHand.nextInHand
 		e.state.spotlight = bb.nextInHand
 	}
-	sb.postBlind(e.state.smallBlind)
-	bb.postBlind(e.state.bigBlind)
+	sb.putChipsInPot(e.state, e.state.smallBlind)
+	bb.putChipsInPot(e.state, e.state.bigBlind)
+
 	e.state.lastAggressor = bb
+	e.state.minRaise = e.state.bigBlind
+	e.state.currentBet = e.state.bigBlind
 
 	e.transitionState(StatePauseAfterPostBlinds)
 }
@@ -228,13 +237,15 @@ func (e *engine) pauseAfterEveryoneFoldedPayout() {
 }
 
 func (e *engine) endStreet() {
+	e.state.createSidePots()
+	e.state.collectPot()
 	e.transitionState(StatePauseAfterEndStreet)
 }
 
 func (e *engine) pauseAfterEndStreet() {
 	time.Sleep(PAUSE_MEDIUM)
 	if e.state.isStreetRiver() {
-		e.transitionState(StateShowdownPayout)
+		e.transitionState(StateShowdown)
 	} else {
 		e.state.goToNextStreet()
 		e.transitionState(StateDealStreet)
@@ -244,6 +255,7 @@ func (e *engine) pauseAfterEndStreet() {
 func (e *engine) resetSpotlight() {
 	e.state.spotlight = e.state.psuedoDealer.nextInHand
 	e.state.lastAggressor = e.state.psuedoDealer
+	e.state.minRaise = e.state.bigBlind
 }
 
 func (e *engine) dealStreet() {
@@ -258,11 +270,21 @@ func (e *engine) dealStreet() {
 }
 
 func (e *engine) showdown() {
-	// determine winner
+	for e.state.pot > 0 {
+		winners := e.state.findBestHand()
+		e.state.payoutWinners(winners)
+		// remove winners in case we still need to payout a side pot
+		e.state.removePlayersInHand(winners)
+	}
 }
 
-func (e *engine) payout() {
-	// should call endHand
+func (e *engine) pauseAfterShowdown() {
+	time.Sleep(PAUSE_MEDIUM)
+	if e.state.pot > 0 {
+		e.transitionState(StateShowdown)
+	} else {
+		e.transitionState(StateEndHand)
+	}
 }
 
 func (e *engine) endHand() {
@@ -275,7 +297,6 @@ func (e *engine) sendState() {
 	if !e.state.hasStateChanged() {
 		return
 	}
-	
 
 	serializeState := createSerializeState(e.state)
 	responseMsg, err := json.Marshal(serializeState)

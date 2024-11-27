@@ -33,6 +33,8 @@ type SerializeState struct {
     ChannelCommand string `json:"channelCommand"`
 	BigBlind float64 `json:"bigBlind"`
 	TimebankTotal float64 `json:"timebankTotal"`
+    Pot float64 `json:"pot"`
+    CommunityCards []poker.Card `json:"communityCards"`
 	Players map[int]SerializePlayer `json:"players"`
 }
 
@@ -46,6 +48,8 @@ func createSerializeState(s *state) SerializeState {
         ChannelCommand: "sendState",
         BigBlind: s.bigBlind,
         TimebankTotal: s.timebankTotal,
+        Pot: s.pot,
+        CommunityCards: s.communityCards,
         Players: serializePlayers,
     }
 }

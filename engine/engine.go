@@ -111,6 +111,7 @@ func (e *engine) tick() {
 
 func (e *engine) transitionState(newEngineState engineState) {
 	log.Println("Transitioning state from", e.engineState, "to", newEngineState)
+	log.Println("Street:", e.state.street, "Community cards:", e.state.communityCards)
 	e.engineState = newEngineState
 }
 
@@ -127,7 +128,7 @@ func (e *engine) processSitCommand() {
 	commandsCopy := e.sitCommands
 	e.sitCommands = make([]Event, 0)
 	for _, command := range commandsCopy {
-		fmt.Println("processing sit command: ", command)
+		log.Println("processing sit command: ", command)
 		user := command.User
 
 		if command.EngineCommand == "join" {
@@ -148,7 +149,7 @@ func (e *engine) processGameCommand() {
 	commandsCopy := e.gameCommands
 	e.gameCommands = make([]Event, 0)
 	for _, command := range commandsCopy {
-		fmt.Println("processing game command: ", command)
+		log.Println("processing game command: ", command)
 		user := command.User
 		err := e.state.players[user].makeAction(&command, e, e.state)
 		if err != nil {
@@ -252,30 +253,49 @@ func (e *engine) pauseAfterEndStreet() {
 	}
 }
 
-func (e *engine) resetSpotlight() {
+// returns true if all players are all in
+func (e *engine) resetSpotlight() bool {
 	e.state.spotlight = e.state.psuedoDealer.nextInHand
+	for e.state.spotlight.isAllIn() {
+		e.state.spotlight = e.state.spotlight.nextInHand
+		if e.state.spotlight == e.state.psuedoDealer.nextInHand {
+			return true
+		}
+	}
+
 	e.state.lastAggressor = e.state.psuedoDealer
 	e.state.minRaise = e.state.bigBlind
+	return false
 }
 
 func (e *engine) dealStreet() {
 	var cards []poker.Card
 	if e.state.isStreetFlop() {
 		cards = append(cards, poker.NewDeck().Draw(3)...)
+	} else {
+		cards = append(cards, poker.NewDeck().Draw(1)...)
 	}
 	e.state.communityCards = append(e.state.communityCards, cards...)
 
-	e.resetSpotlight()
-	e.transitionState(StateProcessGameCommands)
+	// if all players are all in, skip to end street
+	isAllPlayersAllIn := e.resetSpotlight()
+	if isAllPlayersAllIn {
+		e.transitionState(StateEndStreet)
+	} else {
+		e.transitionState(StateProcessGameCommands)
+	}
 }
 
 func (e *engine) showdown() {
 	for e.state.pot > 0 {
-		winners := e.state.findBestHand()
+		winners := findBestHand(e.state.psuedoDealer, e.state.communityCards)
+		fmt.Println("Winners: ", winners)
 		e.state.payoutWinners(winners)
 		// remove winners in case we still need to payout a side pot
 		e.state.removePlayersInHand(winners)
 	}
+	// NEED TO ADD THIS BUT WANT TO GET SHOWDOWN WORKING FIRST
+	// e.transitionState(StatePauseAfterShowdown)
 }
 
 func (e *engine) pauseAfterShowdown() {
@@ -305,5 +325,5 @@ func (e *engine) sendState() {
 	}
 
 	e.conn.WriteMessage(websocket.TextMessage, responseMsg)
-	fmt.Println("Sending state...")
+	log.Println("Sending state...")
 }

@@ -253,11 +253,12 @@ func (s *state) collectPot() {
 }
 
 func (s *state) createSidePots() {
-	pointer := s.psuedoDealer
-	for {
+	pointer := s.psuedoDealer.nextInHand
+	for pointer != s.psuedoDealer {
 		if pointer.isAllIn() && pointer.chipsInPot <= s.currentBet {
 			pointer.maxWin = s.createSidePot(pointer)
 		}
+		pointer = pointer.nextInHand
 	}
 }
 
@@ -368,28 +369,6 @@ func (s *state) performDealerRotation() error {
 	return nil
 }
 
-func (s *state) findBestHand() []*player {
-	bestHand := int32(math.MaxInt32)
-	winners := make([]*player, 0)
-
-	pointer := s.psuedoDealer
-	for pointer != s.psuedoDealer {
-		pointer = pointer.nextInHand
-		rank := poker.Evaluate(append(pointer.holeCards, s.communityCards...))
-
-		if rank < bestHand {
-			winners = make([]*player, 1)
-			winners[0] = pointer
-		// split pot
-		} else if rank == bestHand {
-			winners = append(winners, pointer)
-		}
-		bestHand = min(bestHand, rank)
-	}
-
-	return winners
-}
-
 func (s *state) payoutWinners(winners []*player) {
 	// takes in list of winner(s) and pays them out in order of maxWin asc
 	sortWinnersByMaxWin(winners)
@@ -464,7 +443,8 @@ func (s *state) hasStateChanged() bool {
 	   prev.psuedoDealer != curr.psuedoDealer || 
 	   prev.spotlight != curr.spotlight || 
 	   prev.street != curr.street || 
-	   prev.pot != curr.pot {
+	   prev.pot != curr.pot ||
+	   CompareCardSlices(prev.communityCards, curr.communityCards) {
 		return true
 	}
 
@@ -481,4 +461,29 @@ func (s *state) hasStateChanged() bool {
     }
 
     return false
+}
+
+func findBestHand(psuedoDealer *player, communityCards []poker.Card) []*player {
+	bestHand := int32(math.MaxInt32)
+	winners := make([]*player, 0)
+
+	pointer := psuedoDealer
+	for {
+		rank := poker.Evaluate(append(pointer.holeCards, communityCards...))
+		if rank < bestHand {
+			winners = make([]*player, 1)
+			winners[0] = pointer
+			bestHand = rank
+		// split pot
+		} else if rank == bestHand {
+			winners = append(winners, pointer)
+		}
+
+		pointer = pointer.nextInHand
+		if pointer == psuedoDealer {
+			break
+		}
+	}
+
+	return winners
 }

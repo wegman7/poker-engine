@@ -190,16 +190,8 @@ func (p *player) verifyLegalBet(s *state, betAmount float64) error {
 }
 
 func comparePlayers(prev *player, curr *player) bool {
-	// Check if the lengths of holeCards are different
-	if len(prev.holeCards) != len(curr.holeCards) {
+	if !CompareCardSlices(prev.holeCards, curr.holeCards) {
 		return false
-	}
-
-	// Compare each card in holeCards
-	for i, card := range prev.holeCards {
-		if card != curr.holeCards[i] {
-			return false
-		}
 	}
 
 	// Compare other fields

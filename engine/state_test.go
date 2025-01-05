@@ -2,6 +2,8 @@ package engine
 
 import (
 	"testing"
+
+	"github.com/chehsunliu/poker"
 )
 
 func TestAddRemovePlayer(t *testing.T) {
@@ -112,7 +114,7 @@ func TestSitOutBustedPlayers(t *testing.T) {
 	}
 }
 
-func TestvalidateMinimumPlayersSittingIn(t *testing.T) {
+func TestVlidateMinimumPlayersSittingIn(t *testing.T) {
 	s := createState(1, 2, 30)
 
 	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
@@ -217,7 +219,7 @@ func TestOrderPlayersInHand(t *testing.T) {
 	}
 }
 
-func TestresetPlayers(t *testing.T) {
+func TestResetPlayers(t *testing.T) {
 	s := createState(1, 2, 30)
 
 	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
@@ -266,5 +268,61 @@ func TestRemovePlayerInHand(t *testing.T) {
 	s.removePlayerInHand(p1)
 	if s.printPlayersInHand() != "8 -> 8" {
 		t.Errorf("Expected 8 -> 8, got %v", s.printPlayersInHand())
+	}
+}
+
+func TestFindBestHand(t *testing.T) {
+	communityCards := []poker.Card{
+		poker.NewCard("Ah"),
+		poker.NewCard("Kh"),
+		poker.NewCard("3h"),
+		poker.NewCard("6c"),
+		poker.NewCard("Ac"),
+	}
+
+	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
+	p2 := createPlayer(Event{SeatId: 5, User: "user2", Chips: 100})
+	p3 := createPlayer(Event{SeatId: 6, User: "user3", Chips: 100})
+
+	p1.nextInHand = p2
+	p1.holeCards = []poker.Card{
+		poker.NewCard("As"),
+		poker.NewCard("Kd"),
+	}
+	p2.nextInHand = p3
+	p2.holeCards = []poker.Card{
+		poker.NewCard("Th"),
+		poker.NewCard("9h"),
+	}
+	p3.nextInHand = p1
+	p3.holeCards = []poker.Card{
+		poker.NewCard("5s"),
+		poker.NewCard("Tc"),
+	}
+	winners := findBestHand(p1, communityCards)
+	if len(winners) != 1 || winners[0] != p1 {
+		t.Errorf("Expected p1 to win, got %v", winners)
+	}
+
+	p1.holeCards = []poker.Card{
+		poker.NewCard("6d"),
+		poker.NewCard("3s"),
+	}
+	p2.holeCards = []poker.Card{
+		poker.NewCard("6h"),
+		poker.NewCard("3d"),
+	}
+	winners2 := findBestHand(p1, communityCards)
+	if len(winners2) != 2 || winners2[0] != p1 || winners2[1] != p2 {
+		t.Errorf("Expected p1 and p2 to split, got %v", winners2)
+	}
+
+	p3.holeCards = []poker.Card{
+		poker.NewCard("As"),
+		poker.NewCard("Kd"),
+	}
+	winners3 := findBestHand(p1, communityCards)
+	if len(winners3) != 1 || winners3[0] != p3 {
+		t.Errorf("Expected p3 to win, got %v", winners2)
 	}
 }

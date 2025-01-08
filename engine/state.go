@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/chehsunliu/poker"
+	"github.com/wegman7/game-engine/config"
 )
 
 type street int
@@ -497,7 +498,13 @@ func findBestHand(psuedoDealer *player, communityCards []poker.Card) []*player {
 
 	pointer := psuedoDealer
 	for {
-		rank := poker.Evaluate(append(pointer.holeCards, communityCards...))
+		var rank int32
+		if config.DEBUG {
+			rank = int32(pointer.seatId)
+		} else {
+			rank = poker.Evaluate(append(pointer.holeCards, communityCards...))
+		}
+
 		if rank < bestHand {
 			winners = make([]*player, 1)
 			winners[0] = pointer

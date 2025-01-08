@@ -7,12 +7,8 @@ import (
 
 	"github.com/chehsunliu/poker"
 	"github.com/gorilla/websocket"
+	"github.com/wegman7/game-engine/config"
 )
-
-var ENGINE_LOOP_PAUSE = 100 * time.Millisecond
-var PAUSE_SHORT = 1 * time.Millisecond
-var PAUSE_MEDIUM = 2 * time.Millisecond
-var PAUSE_LONG = 3 * time.Millisecond
 
 type engineState int
 
@@ -63,7 +59,7 @@ func (e *engine) run(stopEngine chan struct{}) {
 			log.Println("Goroutine stopped as WebSocket is closed.")
 			return
 		default:
-			time.Sleep(ENGINE_LOOP_PAUSE)
+			time.Sleep(config.ENGINE_LOOP_PAUSE)
 			e.tick()
 			e.sendState()
 		}
@@ -168,7 +164,7 @@ func (e *engine) startHand() {
 }
 
 func (e *engine) pauseAfterStartHand() {
-	time.Sleep(PAUSE_MEDIUM)
+	time.Sleep(config.PAUSE_MEDIUM)
 	e.transitionState(StatePostBlinds)
 }
 
@@ -214,7 +210,7 @@ func (e *engine) dealCards() {
 }
 
 func (e *engine) pauseAfterEveryoneFolded() {
-	time.Sleep(PAUSE_MEDIUM)
+	time.Sleep(config.PAUSE_MEDIUM)
 	e.transitionState(StateEveryoneFoldedPayout)
 }
 
@@ -233,7 +229,7 @@ func (e *engine) everyoneFoldedPayout() {
 }
 
 func (e *engine) pauseAfterEveryoneFoldedPayout() {
-	time.Sleep(PAUSE_MEDIUM)
+	time.Sleep(config.PAUSE_MEDIUM)
 	e.transitionState(StateEndHand)
 }
 
@@ -244,7 +240,7 @@ func (e *engine) endStreet() {
 }
 
 func (e *engine) pauseAfterEndStreet() {
-	time.Sleep(PAUSE_MEDIUM)
+	time.Sleep(config.PAUSE_MEDIUM)
 	if e.state.isStreetRiver() {
 		e.transitionState(StateShowdown)
 	} else {
@@ -296,7 +292,7 @@ func (e *engine) showdown() {
 }
 
 func (e *engine) pauseAfterShowdown() {
-	time.Sleep(PAUSE_MEDIUM)
+	time.Sleep(config.PAUSE_MEDIUM)
 
 	// continue to pay sidepots until the pot is empty
 	if e.state.pot > 0 {

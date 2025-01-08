@@ -2,6 +2,7 @@ package engine
 
 import (
 	"errors"
+	"log"
 
 	"github.com/chehsunliu/poker"
 )
@@ -68,6 +69,7 @@ func (p *player) makeAction(event *Event, e *engine, s *state) error {
 
 // Add chips to the player's total
 func (p *player) addChips(event *Event, e *engine, s *state) error {
+	log.Println("Adding chips to player: ", p.user, "-", event.Chips)
 	p.chips = p.chips + event.Chips
 	return nil
 }
@@ -115,7 +117,7 @@ func (p *player) call(event *Event, e *engine, s *state) error {
 	if err := p.verifySpotlight(s); err != nil {
 		return err
 	}
-	if err := p.verifyLegalCall(s, event.Chips); err != nil {
+	if err := p.verifyLegalCall(s); err != nil {
 		return err
 	}
 
@@ -157,10 +159,6 @@ func (p *player) putChipsInPot(s *state, amount float64) {
 	p.chips -= amount
 }
 
-func (p *player) shouldCreateSidePot(amount float64) bool {
-	return amount > p.chipsInPot + p.chips
-}
-
 func (p *player) isAllIn() bool {
 	return p.chips == 0
 }
@@ -172,7 +170,7 @@ func (p *player) verifySpotlight(s *state) error {
 	return nil
 }
 
-func (p *player) verifyLegalCall(s *state, betAmount float64) error {
+func (p *player) verifyLegalCall(s *state) error {
 	if p.chipsInPot == s.currentBet {
 		return errors.New("player has already matched the bet")
 	}

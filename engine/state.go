@@ -3,6 +3,7 @@ package engine
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"sort"
 
@@ -161,9 +162,7 @@ func (s *state) removePlayersInHand(players []*player) {
 
 func (s *state) resetDeck() {
 	s.deck = nil
-	for _, player := range s.players {
-		player.holeCards = nil
-	}
+	s.communityCards = nil
 }
 
 func (s *state) resetPlayers() {
@@ -183,6 +182,11 @@ func (s *state) resetState() {
 	s.resetPlayers()
 	s.resetDeck()
 	s.spotlight = nil
+	s.psuedoDealer = nil
+	s.lastAggressor = nil
+	s.street = BetweenHands
+	s.currentBet = 0.0
+	s.minRaise = 0.0
 }
 
 func (s *state) sitoutBustedPlayers() error {
@@ -250,24 +254,16 @@ func (s *state) countPlayersInHand() int {
 // this will keep track of the previous street's pot
 func (s *state) collectPot() {
 	s.collectedPot = s.pot
-}
 
-func (s *state) createSidePots() {
-	pointer := s.psuedoDealer.nextInHand
-	for pointer != s.psuedoDealer {
-		if pointer.isAllIn() && pointer.chipsInPot <= s.currentBet {
-			pointer.maxWin = s.createSidePot(pointer)
+	// reset all players' chips (folded players may still have chips in pot)
+	pointer := s.dealer
+	for {
+		pointer.chipsInPot = 0
+		pointer = pointer.next
+		if pointer == s.dealer {
+			break
 		}
-		pointer = pointer.nextInHand
 	}
-}
-
-func (s *state) createSidePot(hero *player) float64 {
-	maxWin := s.collectedPot
-	for _, villian := range s.players {
-		maxWin += min(hero.chipsInPot, villian.chipsInPot)
-	}
-	return maxWin
 }
 
 func (s *state) isEveryoneFolded() bool {
@@ -394,6 +390,7 @@ func (s *state) distributeChips(winners []*player, amount float64) {
 	for _, winner := range winners {
 		winner.chips += amount / float64(len(winners))
 		winner.maxWin -= amount
+		log.Println(winner.user, " wins ", amount/float64(len(winners)), "with", poker.RankString(poker.Evaluate(append(winner.holeCards, s.communityCards...))))
 	}
 	s.pot -= amount
 }
@@ -444,7 +441,7 @@ func (s *state) hasStateChanged() bool {
 	   prev.spotlight != curr.spotlight || 
 	   prev.street != curr.street || 
 	   prev.pot != curr.pot ||
-	   CompareCardSlices(prev.communityCards, curr.communityCards) {
+	   !CompareCardSlices(prev.communityCards, curr.communityCards) {
 		return true
 	}
 
@@ -461,6 +458,37 @@ func (s *state) hasStateChanged() bool {
     }
 
     return false
+}
+
+// creates sidepots (maxWin) for each player in the pot
+func createSidePots(psuedoDealer *player, currentBet float64, collectedPot float64, pot float64) {
+	pointer := psuedoDealer
+	for {
+		// we need to check if maxWin is 0 to see if it's already been calculated on a previous street
+		if pointer.isAllIn() && pointer.chipsInPot <= currentBet && pointer.maxWin == 0 {
+			pointer.maxWin = createSidePot(pointer, collectedPot)
+		} else {
+			pointer.maxWin = pot
+		}
+		pointer = pointer.nextInHand
+		if pointer == psuedoDealer {
+			break
+		}
+	}
+}
+
+// add the collectedPot (pot from previous street) + chipsInPot from each player (if hero can match it)
+func createSidePot(hero *player, collectedPot float64) float64 {
+	maxWin := collectedPot
+	villian := hero
+	for {
+		maxWin += min(hero.chipsInPot, villian.chipsInPot)
+		villian = villian.next
+		if villian == hero {
+			break
+		}
+	}
+	return maxWin
 }
 
 func findBestHand(psuedoDealer *player, communityCards []poker.Card) []*player {

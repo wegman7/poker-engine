@@ -2,7 +2,6 @@ package engine
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -161,6 +160,7 @@ func (e *engine) processGameCommand() {
 func (e *engine) startHand() {
 	if err := e.state.performDealerRotation(); err != nil {
 		log.Println("Error rotating dealer: ", err)
+		e.transitionState(StateProcessSitCommands)
 		return
 	}
 	e.state.street = Preflop
@@ -238,7 +238,7 @@ func (e *engine) pauseAfterEveryoneFoldedPayout() {
 }
 
 func (e *engine) endStreet() {
-	e.state.createSidePots()
+	createSidePots(e.state.psuedoDealer, e.state.currentBet, e.state.collectedPot, e.state.pot)
 	e.state.collectPot()
 	e.transitionState(StatePauseAfterEndStreet)
 }
@@ -287,19 +287,18 @@ func (e *engine) dealStreet() {
 }
 
 func (e *engine) showdown() {
-	for e.state.pot > 0 {
-		winners := findBestHand(e.state.psuedoDealer, e.state.communityCards)
-		fmt.Println("Winners: ", winners)
-		e.state.payoutWinners(winners)
-		// remove winners in case we still need to payout a side pot
-		e.state.removePlayersInHand(winners)
-	}
-	// NEED TO ADD THIS BUT WANT TO GET SHOWDOWN WORKING FIRST
-	// e.transitionState(StatePauseAfterShowdown)
+	winners := findBestHand(e.state.psuedoDealer, e.state.communityCards)
+	e.state.payoutWinners(winners)
+
+	// remove winners in case we still need to payout a side pot
+	e.state.removePlayersInHand(winners)
+	e.transitionState(StatePauseAfterShowdown)
 }
 
 func (e *engine) pauseAfterShowdown() {
 	time.Sleep(PAUSE_MEDIUM)
+
+	// continue to pay sidepots until the pot is empty
 	if e.state.pot > 0 {
 		e.transitionState(StateShowdown)
 	} else {

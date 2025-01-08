@@ -326,3 +326,61 @@ func TestFindBestHand(t *testing.T) {
 		t.Errorf("Expected p3 to win, got %v", winners2)
 	}
 }
+
+func TestPayoutWinners(t *testing.T) {
+	s := createState(1, 2, 30)
+	s.pot = 1900
+
+	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 0})
+	p2 := createPlayer(Event{SeatId: 5, User: "user2", Chips: 0})
+	p3 := createPlayer(Event{SeatId: 6, User: "user3", Chips: 0})
+	p4 := createPlayer(Event{SeatId: 7, User: "user3", Chips: 0})
+	s.addPlayer(p1)
+	s.addPlayer(p2)
+	s.addPlayer(p3)
+	s.addPlayer(p4)
+
+	p1.maxWin = 800
+	p2.maxWin = 1100
+	p3.maxWin = 1300
+	p4.maxWin = 1900
+
+	winners := []*player{p1, p2, p3, p4}
+	s.payoutWinners(winners)
+
+	if p1.chips != 200 || p2.chips != 300 || p3.chips != 400 || p4.chips != 1000 {
+		t.Errorf("Expected 200, 300, 400, 100, got %v, %v, %v, %v", p1.chips, p2.chips, p3.chips, p4.chips)
+	}
+}
+
+func TestCreatSidepots(t *testing.T) {
+	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 0})
+	p2 := createPlayer(Event{SeatId: 5, User: "user2", Chips: 0})
+	p3 := createPlayer(Event{SeatId: 6, User: "user3", Chips: 0})
+	p4 := createPlayer(Event{SeatId: 7, User: "user4", Chips: 100})
+
+	p1.next, p1.nextInHand = p2, p2
+	p1.chipsInPot = 100
+	p1.chips = 0
+
+	p2.next, p2.nextInHand = p3, p3
+	p2.chipsInPot = 200
+	p2.chips = 0
+
+	p3.next, p3.nextInHand = p4, p4
+	p3.chipsInPot = 300
+	p3.chips = 0
+
+	p4.next, p4.nextInHand = p1, p1
+	p4.chipsInPot = 400
+	p4.chips = 100
+
+	currentBet := 300.0
+	collectedPot := 1000.0
+	pot := 2000.0
+
+	createSidePots(p1, currentBet, collectedPot, pot)
+	if p1.maxWin != 1400 || p2.maxWin != 1700 || p3.maxWin != 1900 || p4.maxWin != 2000 {
+		t.Errorf("Expected 1400, 1700, 1900, 2000, got %v, %v, %v, %v", p1.chips, p2.chips, p3.chips, p4.chips)
+	}
+}

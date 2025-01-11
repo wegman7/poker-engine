@@ -386,14 +386,32 @@ func sortWinnersByMaxWin(winners []*player) {
 	})
 }
 
+// decrease the maxWin for all players after the chips have been distributed to the winners (since they're can still be payouts left)
+func decreaseMaxWin(psuedoDealer *player, amount float64, winnersSet map[*player]bool) {
+	pointer := psuedoDealer
+	for {
+		if _, exists := winnersSet[pointer]; !exists {
+			pointer.maxWin -= amount
+		}
+		pointer = pointer.nextInHand
+		if pointer == psuedoDealer {
+			break
+		}
+	}
+}
+
 // distributeChips divides the chips from the smallest maxWin among all winners.
 func (s *state) distributeChips(winners []*player, amount float64) {
+	winnersSet := make(map[*player]bool)
 	for _, winner := range winners {
 		winner.chips += amount / float64(len(winners))
 		winner.maxWin -= amount
 		log.Println(winner.user, " wins ", amount/float64(len(winners)), "with", poker.RankString(poker.Evaluate(append(winner.holeCards, s.communityCards...))))
+		winnersSet[winner] = true
 	}
 	s.pot -= amount
+
+	decreaseMaxWin(s.psuedoDealer, amount, winnersSet)
 }
 
 func (s *state) printPlayers() string {
@@ -468,7 +486,7 @@ func createSidePots(psuedoDealer *player, currentBet float64, collectedPot float
 		// we need to check if maxWin is 0 to see if it's already been calculated on a previous street
 		if pointer.isAllIn() && pointer.chipsInPot <= currentBet && pointer.maxWin == 0 {
 			pointer.maxWin = createSidePot(pointer, collectedPot)
-		} else {
+		} else if pointer.maxWin == 0 {
 			pointer.maxWin = pot
 		}
 		pointer = pointer.nextInHand

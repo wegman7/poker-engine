@@ -149,6 +149,9 @@ func (p *player) bet(event *Event, e *engine, s *state) error {
 	s.lastAggressor = p
 	s.currentBet = p.chipsInPot
 	s.rotateSpotlight()
+	if s.isStreetComplete() {
+		e.transitionState(StateEndStreet)
+	}
 
 	return nil
 }

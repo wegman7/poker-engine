@@ -373,6 +373,11 @@ func TestPayoutWinners(t *testing.T) {
 		poker.NewCard("As"),
 		poker.NewCard("Kd"),
 	}
+	p1.nextInHand = p2
+	p2.nextInHand = p3
+	p3.nextInHand = p4
+	p4.nextInHand = p1
+	s.psuedoDealer = p1
 	s.payoutWinners(winners)
 
 	if p1.chips != 200 || p2.chips != 300 || p3.chips != 400 || p4.chips != 1000 {

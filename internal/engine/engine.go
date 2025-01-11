@@ -197,10 +197,10 @@ func (e *engine) pauseAfterPostBlinds() {
 }
 
 func (e *engine) dealCards() {
-	deck := poker.NewDeck()
+	e.state.deck = poker.NewDeck()
 	pointer := e.state.dealer.nextInHand
 	for {
-		pointer.holeCards = deck.Draw(2)
+		pointer.holeCards = e.state.deck.Draw(2)
 		if pointer == e.state.dealer {
 			break
 		}
@@ -267,9 +267,9 @@ func (e *engine) resetSpotlight() bool {
 func (e *engine) dealStreet() {
 	var cards []poker.Card
 	if e.state.isStreetFlop() {
-		cards = append(cards, poker.NewDeck().Draw(3)...)
+		cards = append(cards, e.state.deck.Draw(3)...)
 	} else {
-		cards = append(cards, poker.NewDeck().Draw(1)...)
+		cards = append(cards, e.state.deck.Draw(1)...)
 	}
 	e.state.communityCards = append(e.state.communityCards, cards...)
 

@@ -51,7 +51,8 @@ Engine
         - for example, something like "starting new hand", "two players to the flop", "player x won pot of $x with x hand"
     - start thinking about how often to send state and how to keep track of players time (frontend or backend or combo of both?)
     
-    - NEED LOTS OF INT TESTS WITH DEBUG MODE ON!
+    - keep running int tests
+    - why are we pausing so long when the game is starting?
 
 
 

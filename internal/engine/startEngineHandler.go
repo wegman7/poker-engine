@@ -1,11 +1,9 @@
-package main
+package engine
 
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-	"github.com/wegman7/game-engine/engine"
 )
 
 type StartGameRequest struct {
@@ -18,7 +16,7 @@ type StartGameResponse struct {
 	Message string `json:"message"`
 }
 
-func startEngineHandler(w http.ResponseWriter, r *http.Request) {
+func StartEngineHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("startEngineHandler")
 	req := StartGameRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -32,13 +30,5 @@ func startEngineHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(responseData)
 
-	go engine.CreateEngineConn(req.RoomName, req.SmallBlind, req.BigBlind)
-}
-
-func main() {
-	http.HandleFunc("/start-engine", startEngineHandler)
-
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal("ListenAndServe: ", err)
-	}
+	go CreateEngineConn(req.RoomName, req.SmallBlind, req.BigBlind)
 }

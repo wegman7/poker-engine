@@ -1,24 +1,6 @@
 package config
 
-import (
-	"log"
-	"os"
-	"time"
-
-	"github.com/joho/godotenv"
-)
-
-func init() {
-    path := ".env"
-    err := godotenv.Load(path)
-    if err != nil {
-        path += "../"
-        err := godotenv.Load(path)
-        if err != nil {
-            log.Fatalf("Error loading .env file: %v", err)
-    }
-    }
-}
+import "time"
 
 var (
     DEBUG                = true
@@ -26,5 +8,4 @@ var (
     PAUSE_SHORT          = 1 * time.Millisecond
     PAUSE_MEDIUM         = 2 * time.Millisecond
     PAUSE_LONG           = 3 * time.Millisecond
-	MYFAKESECRET 		 = os.Getenv("MYFAKESECRET")
 )

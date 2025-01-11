@@ -492,6 +492,14 @@ func createSidePot(hero *player, collectedPot float64) float64 {
 	return maxWin
 }
 
+func findDebugBestHand(seatId int32) int32 {
+	if seatId < 5 {
+		return 1
+	} else {
+		return seatId
+	}
+}
+
 func findBestHand(psuedoDealer *player, communityCards []poker.Card) []*player {
 	bestHand := int32(math.MaxInt32)
 	winners := make([]*player, 0)
@@ -500,7 +508,7 @@ func findBestHand(psuedoDealer *player, communityCards []poker.Card) []*player {
 	for {
 		var rank int32
 		if config.DEBUG {
-			rank = int32(pointer.seatId)
+			rank = findDebugBestHand(int32(pointer.seatId))
 		} else {
 			rank = poker.Evaluate(append(pointer.holeCards, communityCards...))
 		}

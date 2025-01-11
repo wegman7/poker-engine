@@ -9,9 +9,14 @@ import (
 )
 
 func init() {
-    err := godotenv.Load()
+    path := ".env"
+    err := godotenv.Load(path)
     if err != nil {
-        log.Fatalf("Error loading .env file: %v", err)
+        path += "../"
+        err := godotenv.Load(path)
+        if err != nil {
+            log.Fatalf("Error loading .env file: %v", err)
+    }
     }
 }
 

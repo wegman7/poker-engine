@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/chehsunliu/poker"
+	"github.com/wegman7/game-engine/config"
 )
 
 func TestAddRemovePlayer(t *testing.T) {
@@ -272,6 +273,7 @@ func TestRemovePlayerInHand(t *testing.T) {
 }
 
 func TestFindBestHand(t *testing.T) {
+	config.DEBUG = false
 	communityCards := []poker.Card{
 		poker.NewCard("Ah"),
 		poker.NewCard("Kh"),
@@ -329,6 +331,13 @@ func TestFindBestHand(t *testing.T) {
 
 func TestPayoutWinners(t *testing.T) {
 	s := createState(1, 2, 30)
+	s.communityCards = []poker.Card{
+		poker.NewCard("Ah"),
+		poker.NewCard("Kh"),
+		poker.NewCard("3h"),
+		poker.NewCard("6c"),
+		poker.NewCard("Ac"),
+	}
 	s.pot = 1900
 
 	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 0})
@@ -346,6 +355,24 @@ func TestPayoutWinners(t *testing.T) {
 	p4.maxWin = 1900
 
 	winners := []*player{p1, p2, p3, p4}
+
+	// we only need cards so we can log winning hand without an error, this won't affect the test because winners are already set
+	p1.holeCards = []poker.Card{
+		poker.NewCard("As"),
+		poker.NewCard("Kd"),
+	}
+	p1.holeCards = []poker.Card{
+		poker.NewCard("As"),
+		poker.NewCard("Kd"),
+	}
+	p1.holeCards = []poker.Card{
+		poker.NewCard("As"),
+		poker.NewCard("Kd"),
+	}
+	p1.holeCards = []poker.Card{
+		poker.NewCard("As"),
+		poker.NewCard("Kd"),
+	}
 	s.payoutWinners(winners)
 
 	if p1.chips != 200 || p2.chips != 300 || p3.chips != 400 || p4.chips != 1000 {

@@ -51,9 +51,7 @@ Engine
         - for example, something like "starting new hand", "two players to the flop", "player x won pot of $x with x hand"
     - start thinking about how often to send state and how to keep track of players time (frontend or backend or combo of both?)
     
-    - everything seems to be working well:
-        - need to add transition state after showdown
-        - need to start thinking threw showdown -> start hand and make sure we're not missing anything, and make sure everything is getting reset properly
+    - NEED LOTS OF INT TESTS WITH DEBUG MODE ON!
 
 
 

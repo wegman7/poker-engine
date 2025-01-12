@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -17,7 +18,7 @@ type StartGameResponse struct {
 }
 
 func StartEngineHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("startEngineHandler")
+	log.Println("startEngineHandler")
 	req := StartGameRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)

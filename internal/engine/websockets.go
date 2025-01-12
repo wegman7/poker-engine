@@ -15,10 +15,10 @@ type Event struct {
 	Chips         float64 `json:"chips"`
 }
 
-func closeConn(conn *websocket.Conn, stopEngine chan struct{}) {
+func closeConn(conn *websocket.Conn, stopEngine chan struct{}, roomName string) {
 	// stop engine goroutine
 	close(stopEngine)
-	fmt.Println("stopping engine")
+	log.Println("Closing websockets connection for room", roomName)
 	conn.Close()
 }
 
@@ -42,7 +42,7 @@ func CreateEngineConn(roomName string, smallBlind float64, bigBlind float64) {
 	e := createEngine(conn, roomName, smallBlind, bigBlind)
 	stopEngine := make(chan struct{})
 	go e.run(stopEngine)
-    defer closeConn(conn, stopEngine)
+    defer closeConn(conn, stopEngine, roomName)
 
     for {
         _, message, err := conn.ReadMessage()

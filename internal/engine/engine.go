@@ -29,6 +29,7 @@ const (
 	StatePauseAfterShowdown
 	StateEndHand
 	StateDealStreet
+	StatePauseAfterEndHand
 )
 
 type engine struct {
@@ -56,7 +57,7 @@ func (e *engine) run(stopEngine chan struct{}) {
 	for {
 		select {
 		case <-stopEngine:
-			log.Println("Goroutine stopped as WebSocket is closed.")
+			log.Println("Stopping engine for room", e.roomName)
 			return
 		default:
 			time.Sleep(config.ENGINE_LOOP_PAUSE)
@@ -101,6 +102,8 @@ func (e *engine) tick() {
 		e.pauseAfterShowdown()
 	case StateEndHand:
 		e.endHand()
+	case StatePauseAfterEndHand:
+		e.pauseAfterEndHand()
 	}
 }
 
@@ -192,7 +195,7 @@ func (e *engine) postBlinds() {
 }
 
 func (e *engine) pauseAfterPostBlinds() {
-	time.Sleep(5 * time.Second)
+	time.Sleep(config.PAUSE_MEDIUM)
 	e.transitionState(StateDealCards)
 }
 
@@ -305,6 +308,11 @@ func (e *engine) pauseAfterShowdown() {
 func (e *engine) endHand() {
 	e.state.resetState()
 	e.processSitCommand()
+	e.transitionState(StatePauseAfterEndHand)
+}
+
+func (e *engine) pauseAfterEndHand() {
+	time.Sleep(config.PAUSE_LONG)
 	e.transitionState(StateStartHand)
 }
 

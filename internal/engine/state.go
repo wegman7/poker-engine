@@ -82,6 +82,24 @@ func (s *state) copy() *state {
     }
 }
 
+// CLEAN THIS UP, FIGURE OUT BEST WAY TO HANDLE WHEN TABLE IS FULL AND WHEN PLAYER TRIES TO JOIN WHEN SEAT IS TAKEN
+func determineSeatId(event Event, players map[string]*player) (int, error) {
+	openSeats := make(map[int]bool)
+	for i := 0; i < config.MAX_PLAYERS; i++ {
+		openSeats[i] = true
+	}
+	for _, player := range players {
+		openSeats[player.seatId] = false
+	}
+
+	if event.SeatId != -1 && openSeats[event.SeatId] {
+		return event.SeatId, nil
+	} else if event.SeatId == -1 && !openSeats[event.SeatId] {
+		return -1, errors.New("seat is taken")
+	}
+	
+	return getRandomTrueKey(openSeats)
+}
 
 func (s *state) addPlayer(p *player) {
 	s.players[p.user] = p

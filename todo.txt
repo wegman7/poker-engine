@@ -51,7 +51,7 @@ Engine
         - for example, something like "starting new hand", "two players to the flop", "player x won pot of $x with x hand"
     - start thinking about how often to send state and how to keep track of players time (frontend or backend or combo of both?)
     
-    - keep running int tests
+    - add timebanks
 
 
 

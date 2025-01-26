@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/gorilla/websocket"
 )
@@ -32,7 +33,11 @@ func deserializeMessage(message []byte) (Event, error) {
 }
 
 func CreateEngineConn(roomName string, smallBlind float64, bigBlind float64) {
-	url := fmt.Sprintf("ws://localhost:8000/ws/engineconsumer/%s/", roomName)
+	token, err := getUserToken(os.Getenv("EMAIL"), os.Getenv("PASSWORD"))
+	if err != nil {
+		log.Fatal("could not retreive user token:", err)
+	}
+	url := fmt.Sprintf("ws://localhost:8000/ws/engineconsumer/%s?token=%s", roomName, token)
 
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {

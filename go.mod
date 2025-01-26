@@ -6,3 +6,5 @@ require (
 	github.com/chehsunliu/poker v0.1.0
 	github.com/gorilla/websocket v1.5.3
 )
+
+require github.com/joho/godotenv v1.5.1

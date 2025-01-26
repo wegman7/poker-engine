@@ -130,6 +130,12 @@ func (e *engine) processSitCommand() {
 		user := command.User
 
 		if command.EngineCommand == "join" {
+			seatId, err := determineSeatId(command, e.state.players)
+			if err != nil {
+				log.Println("Error determining seat id: ", err)
+				continue
+			}
+			command.SeatId = seatId
 			p := createPlayer(command)
 			e.state.addPlayer(p)
 		} else if command.EngineCommand == "leave" {

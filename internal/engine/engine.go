@@ -57,6 +57,7 @@ func (e *engine) run(stopEngine chan struct{}) {
 	for {
 		select {
 		case <-stopEngine:
+			delete(runningEngines, e.roomName)
 			log.Println("Stopping engine for room", e.roomName)
 			return
 		default:
@@ -137,7 +138,11 @@ func (e *engine) processSitCommand() {
 			}
 			command.SeatId = seatId
 			p := createPlayer(command)
-			e.state.addPlayer(p)
+			err2 := e.state.addPlayer(p)
+			if err2 != nil {
+				log.Println("Error adding player: ", err2)
+				continue
+			}
 		} else if command.EngineCommand == "leave" {
 			e.state.removePlayer(e.state.players[user])
 		} else if command.EngineCommand == "startGame" {

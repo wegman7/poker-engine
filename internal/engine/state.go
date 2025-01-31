@@ -82,7 +82,6 @@ func (s *state) copy() *state {
     }
 }
 
-// CLEAN THIS UP, FIGURE OUT BEST WAY TO HANDLE WHEN TABLE IS FULL AND WHEN PLAYER TRIES TO JOIN WHEN SEAT IS TAKEN
 func determineSeatId(event Event, players map[string]*player) (int, error) {
 	openSeats := make(map[int]bool)
 	for i := 0; i < config.MAX_PLAYERS; i++ {
@@ -94,19 +93,23 @@ func determineSeatId(event Event, players map[string]*player) (int, error) {
 
 	if event.SeatId != -1 && openSeats[event.SeatId] {
 		return event.SeatId, nil
-	} else if event.SeatId == -1 && !openSeats[event.SeatId] {
+	} else if event.SeatId != -1 && !openSeats[event.SeatId] {
 		return -1, errors.New("seat is taken")
 	}
 	
 	return getRandomTrueKey(openSeats)
 }
 
-func (s *state) addPlayer(p *player) {
+func (s *state) addPlayer(p *player) error {
+	if _, exists := s.players[p.user]; exists {
+		return errors.New("player already at the table")
+	}
+
 	s.players[p.user] = p
 	if s.dealer == nil {
 		s.dealer = p
 		p.next = p
-		return
+		return nil
 	}
 	pointer := s.dealer
 	for {
@@ -120,7 +123,7 @@ func (s *state) addPlayer(p *player) {
 		if isReachedHighestSeat || isBetweenTwoSeats || isReachedLastSeat {
 			p.next = pointer.next
 			pointer.next = p
-			return
+			return nil
 		}
 		pointer = pointer.next
 	}

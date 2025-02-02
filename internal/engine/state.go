@@ -276,6 +276,7 @@ func (s *state) countPlayersInHand() int {
 // this will keep track of the previous street's pot
 func (s *state) collectPot() {
 	s.collectedPot = s.pot
+	s.currentBet = 0.0
 
 	// reset all players' chips (folded players may still have chips in pot)
 	pointer := s.dealer

@@ -11,10 +11,10 @@ func TestAddRemovePlayer(t *testing.T) {
 	s := createState(1, 2, 30)
 
 	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
-	p2 := createPlayer(Event{SeatId: 5, User: "user1", Chips: 100})
-	p3 := createPlayer(Event{SeatId: 8, User: "user1", Chips: 100})
-	p4 := createPlayer(Event{SeatId: 6, User: "user1", Chips: 100})
-	p5 := createPlayer(Event{SeatId: 0, User: "user1", Chips: 100})
+	p2 := createPlayer(Event{SeatId: 5, User: "user2", Chips: 100})
+	p3 := createPlayer(Event{SeatId: 8, User: "user3", Chips: 100})
+	p4 := createPlayer(Event{SeatId: 6, User: "user4", Chips: 100})
+	p5 := createPlayer(Event{SeatId: 0, User: "user5", Chips: 100})
 
 	s.addPlayer(p1)
 	if s.dealer != p1 {
@@ -98,8 +98,8 @@ func TestSitOutBustedPlayers(t *testing.T) {
 	s := createState(1, 2, 30)
 
 	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
-	p2 := createPlayer(Event{SeatId: 5, User: "user1", Chips: 0})
-	p3 := createPlayer(Event{SeatId: 8, User: "user1", Chips: 100})
+	p2 := createPlayer(Event{SeatId: 5, User: "user2", Chips: 0})
+	p3 := createPlayer(Event{SeatId: 8, User: "user3", Chips: 100})
 
 	s.addPlayer(p1)
 	s.addPlayer(p2)
@@ -119,8 +119,8 @@ func TestVlidateMinimumPlayersSittingIn(t *testing.T) {
 	s := createState(1, 2, 30)
 
 	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
-	p2 := createPlayer(Event{SeatId: 5, User: "user1", Chips: 100})
-	p3 := createPlayer(Event{SeatId: 8, User: "user1", Chips: 100})
+	p2 := createPlayer(Event{SeatId: 5, User: "user2", Chips: 100})
+	p3 := createPlayer(Event{SeatId: 8, User: "user3", Chips: 100})
 
 	s.addPlayer(p1)
 	s.addPlayer(p2)
@@ -149,8 +149,8 @@ func TestRotateDealer(t *testing.T) {
 	s := createState(1, 2, 30)
 
 	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
-	p2 := createPlayer(Event{SeatId: 5, User: "user1", Chips: 100})
-	p3 := createPlayer(Event{SeatId: 8, User: "user1", Chips: 100})
+	p2 := createPlayer(Event{SeatId: 5, User: "user2", Chips: 100})
+	p3 := createPlayer(Event{SeatId: 8, User: "user3", Chips: 100})
 
 	err := s.rotateDealer()
 	if err == nil || err.Error() != "dealer is nil" {
@@ -193,10 +193,10 @@ func TestOrderPlayersInHand(t *testing.T) {
 	s := createState(1, 2, 30)
 
 	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
-	p2 := createPlayer(Event{SeatId: 5, User: "user1", Chips: 100})
-	p3 := createPlayer(Event{SeatId: 8, User: "user1", Chips: 100})
-	p4 := createPlayer(Event{SeatId: 6, User: "user1", Chips: 100})
-	p5 := createPlayer(Event{SeatId: 0, User: "user1", Chips: 100})
+	p2 := createPlayer(Event{SeatId: 5, User: "user2", Chips: 100})
+	p3 := createPlayer(Event{SeatId: 8, User: "user3", Chips: 100})
+	p4 := createPlayer(Event{SeatId: 6, User: "user4", Chips: 100})
+	p5 := createPlayer(Event{SeatId: 0, User: "user5", Chips: 100})
 	s.addPlayer(p1)
 	s.addPlayer(p2)
 	s.addPlayer(p3)
@@ -224,10 +224,10 @@ func TestResetPlayers(t *testing.T) {
 	s := createState(1, 2, 30)
 
 	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
-	p2 := createPlayer(Event{SeatId: 5, User: "user1", Chips: 100})
-	p3 := createPlayer(Event{SeatId: 8, User: "user1", Chips: 100})
-	p4 := createPlayer(Event{SeatId: 6, User: "user1", Chips: 100})
-	p5 := createPlayer(Event{SeatId: 0, User: "user1", Chips: 100})
+	p2 := createPlayer(Event{SeatId: 5, User: "user2", Chips: 100})
+	p3 := createPlayer(Event{SeatId: 8, User: "user3", Chips: 100})
+	p4 := createPlayer(Event{SeatId: 6, User: "user4", Chips: 100})
+	p5 := createPlayer(Event{SeatId: 0, User: "user5", Chips: 100})
 	s.addPlayer(p1)
 	s.addPlayer(p2)
 	s.addPlayer(p3)
@@ -253,8 +253,8 @@ func TestRemovePlayerInHand(t *testing.T) {
 	s := createState(1, 2, 30)
 
 	p1 := createPlayer(Event{SeatId: 1, User: "user1", Chips: 100})
-	p2 := createPlayer(Event{SeatId: 5, User: "user1", Chips: 100})
-	p3 := createPlayer(Event{SeatId: 8, User: "user1", Chips: 100})
+	p2 := createPlayer(Event{SeatId: 5, User: "user2", Chips: 100})
+	p3 := createPlayer(Event{SeatId: 8, User: "user3", Chips: 100})
 	s.addPlayer(p1)
 	s.addPlayer(p2)
 	s.addPlayer(p3)

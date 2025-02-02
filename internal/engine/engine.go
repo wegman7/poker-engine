@@ -332,7 +332,7 @@ func (e *engine) sendState() {
 		return
 	}
 
-	serializeState := createSerializeState(e.state)
+	serializeState := createSerializeState(e.state, e.engineState == StateProcessSitCommands)
 	responseMsg, err := json.Marshal(serializeState)
 	if err != nil {
 		return

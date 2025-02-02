@@ -3,7 +3,6 @@ package engine
 import "github.com/chehsunliu/poker"
 
 type SerializePlayer struct {
-    SeatId int `json:"seatId"`
 	User string `json:"user"`
 	SittingOut bool `json:"sittingOut"`
 	Chips float64 `json:"chips"`
@@ -16,7 +15,6 @@ type SerializePlayer struct {
 
 func createSerializePlayer(p *player, s *state) SerializePlayer {
     return SerializePlayer{
-        SeatId: p.seatId,
         User: p.user,
         SittingOut: p.sittingOut,
         Chips: p.chips,
@@ -26,7 +24,6 @@ func createSerializePlayer(p *player, s *state) SerializePlayer {
         Spotlight: p == s.spotlight,
         Dealer: p == s.dealer,
     }
-
 }
 
 type SerializeState struct {
@@ -34,11 +31,15 @@ type SerializeState struct {
 	BigBlind float64 `json:"bigBlind"`
 	TimebankTotal float64 `json:"timebankTotal"`
     Pot float64 `json:"pot"`
+    CollectedPot float64 `json:"collectedPot"`
+    CurrentBet float64 `json:"currentBet"`
+    MinRaise float64 `json:"minRaise"`
     CommunityCards []poker.Card `json:"communityCards"`
 	Players map[int]SerializePlayer `json:"players"`
+    GameStopped bool `json:"gameStopped"`
 }
 
-func createSerializeState(s *state) SerializeState {
+func createSerializeState(s *state, gameStopped bool) SerializeState {
     serializePlayers := make(map[int]SerializePlayer)
     for _, player := range s.players {
         serializePlayers[player.seatId] = createSerializePlayer(player, s)
@@ -49,7 +50,11 @@ func createSerializeState(s *state) SerializeState {
         BigBlind: s.bigBlind,
         TimebankTotal: s.timebankTotal,
         Pot: s.pot,
+        CollectedPot: s.collectedPot,
+        CurrentBet: s.currentBet,
+        MinRaise: s.minRaise,
         CommunityCards: s.communityCards,
         Players: serializePlayers,
+        GameStopped: gameStopped,
     }
 }

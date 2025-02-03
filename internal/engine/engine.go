@@ -190,15 +190,16 @@ func (e *engine) postBlinds() {
 		sb = e.state.dealer
 		bb = e.state.dealer.nextInHand
 		e.state.spotlight = sb
+		e.state.lastAggressor = sb
 	} else {
 		sb = e.state.dealer.nextInHand
 		bb = e.state.dealer.nextInHand.nextInHand
 		e.state.spotlight = bb.nextInHand
+		e.state.lastAggressor = bb.nextInHand
 	}
 	sb.putChipsInPot(e.state, e.state.smallBlind)
 	bb.putChipsInPot(e.state, e.state.bigBlind)
 
-	e.state.lastAggressor = bb
 	e.state.minRaise = e.state.bigBlind
 	e.state.currentBet = e.state.bigBlind
 
@@ -230,15 +231,8 @@ func (e *engine) pauseAfterEveryoneFolded() {
 
 func (e *engine) everyoneFoldedPayout() {
 	winner := e.state.psuedoDealer
-
-	chips := 0.0
-	for _, player := range e.state.players {
-		chips += player.chipsInPot
-		player.chipsInPot = 0
-	}
-	chips += e.state.pot
-
-	winner.chips += chips
+	e.state.collectPot()
+	winner.chips += e.state.pot
 	e.transitionState(StatePauseAfterEveryoneFoldedPayout)
 }
 
@@ -273,7 +267,7 @@ func (e *engine) resetSpotlight() bool {
 		}
 	}
 
-	e.state.lastAggressor = e.state.psuedoDealer
+	e.state.lastAggressor = e.state.psuedoDealer.nextInHand
 	e.state.minRaise = e.state.bigBlind
 	return false
 }

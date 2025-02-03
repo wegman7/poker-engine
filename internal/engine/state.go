@@ -432,6 +432,7 @@ func (s *state) distributeChips(winners []*player, amount float64) {
 		winnersSet[winner] = true
 	}
 	s.pot -= amount
+	s.collectedPot -= amount
 
 	decreaseMaxWin(s.psuedoDealer, amount, winnersSet)
 }

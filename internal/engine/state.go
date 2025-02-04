@@ -209,6 +209,8 @@ func (s *state) resetState() {
 	s.street = BetweenHands
 	s.currentBet = 0.0
 	s.minRaise = 0.0
+	s.pot = 0.0
+	s.collectedPot = 0.0
 }
 
 func (s *state) sitoutBustedPlayers() error {

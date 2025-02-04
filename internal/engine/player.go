@@ -138,6 +138,7 @@ func (p *player) bet(event *Event, e *engine, s *state) error {
 		return err
 	}
 	
+	// betAmount is the amount the player is actually putting in the pot
 	betAmount := min(event.Chips - p.chipsInPot, p.chips)
 	if err := p.verifyLegalBet(s, betAmount); err != nil {
 		return err
@@ -145,7 +146,8 @@ func (p *player) bet(event *Event, e *engine, s *state) error {
 
 	p.putChipsInPot(s, betAmount)
 
-	s.minRaise = betAmount
+	// we need to wrap this in a max function because a player could be going all in for a small amount
+	s.minRaise = max(p.chipsInPot - s.currentBet, s.minRaise)
 	s.lastAggressor = p
 	s.currentBet = p.chipsInPot
 	s.rotateSpotlight()
@@ -183,7 +185,7 @@ func (p *player) verifyLegalCall(s *state) error {
 
 func (p *player) verifyLegalBet(s *state, betAmount float64) error {
 	// if betAmount == p.chips then the player is all in and the bet is legal
-	if betAmount < s.minRaise && betAmount != p.chips {
+	if betAmount < s.minRaise + s.currentBet && betAmount > p.chips + p.chipsInPot {
 		return errors.New("bet amount is less than minimum")
 	}
 

@@ -84,7 +84,7 @@ func (s *state) copy() *state {
 
 func determineSeatId(event Event, players map[string]*player) (int, error) {
 	openSeats := make(map[int]bool)
-	for i := 0; i < config.MAX_PLAYERS; i++ {
+	for i := 0; i < config.AppConfig.MAX_PLAYERS; i++ {
 		openSeats[i] = true
 	}
 	for _, player := range players {
@@ -550,7 +550,7 @@ func findBestHand(psuedoDealer *player, communityCards []poker.Card) []*player {
 	pointer := psuedoDealer
 	for {
 		var rank int32
-		if config.DEBUG {
+		if config.AppConfig.DEBUG {
 			rank = findDebugBestHand(int32(pointer.seatId))
 		} else {
 			rank = poker.Evaluate(append(pointer.holeCards, communityCards...))

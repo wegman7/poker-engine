@@ -61,7 +61,7 @@ func (e *engine) run(stopEngine chan struct{}) {
 			log.Println("Stopping engine for room", e.roomName)
 			return
 		default:
-			time.Sleep(config.ENGINE_LOOP_PAUSE)
+			time.Sleep(config.AppConfig.ENGINE_LOOP_PAUSE)
 			e.tick()
 			e.sendState()
 		}
@@ -178,7 +178,7 @@ func (e *engine) startHand() {
 }
 
 func (e *engine) pauseAfterStartHand() {
-	time.Sleep(config.PAUSE_MEDIUM)
+	time.Sleep(config.AppConfig.PAUSE_MEDIUM)
 	e.transitionState(StatePostBlinds)
 }
 
@@ -207,7 +207,7 @@ func (e *engine) postBlinds() {
 }
 
 func (e *engine) pauseAfterPostBlinds() {
-	time.Sleep(config.PAUSE_MEDIUM)
+	time.Sleep(config.AppConfig.PAUSE_MEDIUM)
 	e.transitionState(StateDealCards)
 }
 
@@ -225,7 +225,7 @@ func (e *engine) dealCards() {
 }
 
 func (e *engine) pauseAfterEveryoneFolded() {
-	time.Sleep(config.PAUSE_MEDIUM)
+	time.Sleep(config.AppConfig.PAUSE_MEDIUM)
 	e.transitionState(StateEveryoneFoldedPayout)
 }
 
@@ -239,7 +239,7 @@ func (e *engine) everyoneFoldedPayout() {
 }
 
 func (e *engine) pauseAfterEveryoneFoldedPayout() {
-	time.Sleep(config.PAUSE_MEDIUM)
+	time.Sleep(config.AppConfig.PAUSE_MEDIUM)
 	e.transitionState(StateEndHand)
 }
 
@@ -250,7 +250,7 @@ func (e *engine) endStreet() {
 }
 
 func (e *engine) pauseAfterEndStreet() {
-	time.Sleep(config.PAUSE_MEDIUM)
+	time.Sleep(config.AppConfig.PAUSE_MEDIUM)
 	if e.state.isStreetRiver() {
 		e.transitionState(StateShowdown)
 	} else {
@@ -302,7 +302,7 @@ func (e *engine) showdown() {
 }
 
 func (e *engine) pauseAfterShowdown() {
-	time.Sleep(config.PAUSE_MEDIUM)
+	time.Sleep(config.AppConfig.PAUSE_MEDIUM)
 
 	// continue to pay sidepots until the pot is empty
 	if e.state.pot > 0 {
@@ -319,7 +319,7 @@ func (e *engine) endHand() {
 }
 
 func (e *engine) pauseAfterEndHand() {
-	time.Sleep(config.PAUSE_LONG)
+	time.Sleep(config.AppConfig.PAUSE_LONG)
 	e.transitionState(StateStartHand)
 }
 

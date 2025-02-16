@@ -273,7 +273,7 @@ func TestRemovePlayerInHand(t *testing.T) {
 }
 
 func TestFindBestHand(t *testing.T) {
-	config.DEBUG = false
+	config.AppConfig.DEBUG = false
 	communityCards := []poker.Card{
 		poker.NewCard("Ah"),
 		poker.NewCard("Kh"),

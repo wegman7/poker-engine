@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -14,6 +15,7 @@ type Config struct {
     PAUSE_MEDIUM time.Duration
     PAUSE_LONG time.Duration
     MAX_PLAYERS int
+	BACKEND_URL string
 }
 
 var AppConfig Config
@@ -32,6 +34,7 @@ func Load(env string) error {
 			PAUSE_MEDIUM: 2 * time.Millisecond,
 			PAUSE_LONG: 5000 * time.Millisecond,
 			MAX_PLAYERS: 9,
+			BACKEND_URL: os.Getenv("BACKEND_URL"),
 		}
 	case "prod":
 		// prod env vars will be loaded into docker container at runtime
@@ -42,6 +45,7 @@ func Load(env string) error {
 			PAUSE_MEDIUM: 1500 * time.Millisecond,
 			PAUSE_LONG: 2000 * time.Millisecond,
 			MAX_PLAYERS: 9,
+			BACKEND_URL: os.Getenv("BACKEND_URL"),
 		}
 	default:
 		return fmt.Errorf("unknown environment: %s", env)

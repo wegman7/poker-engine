@@ -23,5 +23,6 @@
 
 # # env file
 .env
+.env.prod
 
 .vscode/

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/gorilla/websocket"
+	"github.com/wegman7/game-engine/config"
 )
 
 type Event struct {
@@ -37,7 +38,7 @@ func CreateEngineConn(roomName string, smallBlind float64, bigBlind float64) {
 	if err != nil {
 		log.Fatal("could not retreive user token:", err)
 	}
-	url := fmt.Sprintf("ws://localhost:8000/ws/engineconsumer/%s?token=%s", roomName, token)
+	url := fmt.Sprintf("ws://%s/ws/engineconsumer/%s?token=%s", roomName, config.AppConfig.BACKEND_URL, token)
 
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {

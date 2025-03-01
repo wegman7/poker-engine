@@ -38,7 +38,7 @@ func CreateEngineConn(roomName string, smallBlind float64, bigBlind float64) {
 	if err != nil {
 		log.Fatal("could not retreive user token:", err)
 	}
-	url := fmt.Sprintf("ws://%s/ws/engineconsumer/%s?token=%s", config.AppConfig.BACKEND_URL, roomName, token)
+	url := fmt.Sprintf("%s/ws/engineconsumer/%s?token=%s", config.AppConfig.BACKEND_URL, roomName, token)
 
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {

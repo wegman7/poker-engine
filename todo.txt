@@ -54,8 +54,7 @@ Backlog:
     - add timebanks
 
 TODO:
-    - 
-
+    - there's a bug where sometimes if one player is all in and another player is not, it will wait for the player not all in to make an action rather than going straight to showdown
 
 
 

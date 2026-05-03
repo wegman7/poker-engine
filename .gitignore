@@ -26,3 +26,5 @@
 .env.prod
 
 .vscode/
+
+.DS_Store

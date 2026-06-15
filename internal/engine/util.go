@@ -50,11 +50,12 @@ func getUserToken(username string, password string) (string, error) {
 
 	// Prepare the request body
 	bodyData := map[string]string{
-		"grant_type": "password",
-		"client_id":  os.Getenv("AUTH0_CLIENT_ID"),
-		"audience":   os.Getenv("AUTH0_AUDIENCE"),
-		"username":   username,
-		"password":   password,
+		"grant_type":    "password",
+		"client_id":     os.Getenv("AUTH0_CLIENT_ID"),
+		"client_secret": os.Getenv("AUTH0_CLIENT_SECRET"),
+		"audience":      os.Getenv("AUTH0_AUDIENCE"),
+		"username":      username,
+		"password":      password,
 	}
 
 	bodyBytes, err := json.Marshal(bodyData)

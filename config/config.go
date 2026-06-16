@@ -32,7 +32,7 @@ func Load(env string) error {
 			ENGINE_LOOP_PAUSE: 10 * time.Millisecond,
 			PAUSE_SHORT: 1 * time.Millisecond,
 			PAUSE_MEDIUM: 2 * time.Millisecond,
-			PAUSE_LONG: 5000 * time.Millisecond,
+			PAUSE_LONG: 3 * time.Millisecond,
 			MAX_PLAYERS: 9,
 			BACKEND_URL: os.Getenv("BACKEND_URL"),
 		}

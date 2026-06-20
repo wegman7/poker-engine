@@ -518,7 +518,7 @@ func createSidePots(psuedoDealer *player, currentBet float64, collectedPot float
 		// we need to check if maxWin is 0 to see if it's already been calculated on a previous street
 		if pointer.isAllIn() && pointer.chipsInPot <= currentBet && pointer.maxWin == 0 {
 			pointer.maxWin = createSidePot(pointer, collectedPot)
-		} else if pointer.maxWin == 0 {
+		} else if !pointer.isAllIn() {
 			pointer.maxWin = pot
 		}
 		pointer = pointer.nextInHand

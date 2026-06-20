@@ -233,8 +233,8 @@ func (e *engine) everyoneFoldedPayout() {
 	winner := e.state.psuedoDealer
 	e.state.collectPot()
 	winner.chips += e.state.pot
-	e.state.pot -= e.state.pot
-	e.state.collectedPot -= e.state.pot
+	e.state.collectedPot = 0
+	e.state.pot = 0
 	e.transitionState(StatePauseAfterEveryoneFoldedPayout)
 }
 

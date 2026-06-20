@@ -161,6 +161,13 @@ func (s *state) movePsuedoDealer() {
 }
 
 func (s *state) removePlayerInHand(p *player) {
+	if p.nextInHand == p {
+		// last player in the circular list
+		s.psuedoDealer = nil
+		p.nextInHand = nil
+		return
+	}
+
 	if s.psuedoDealer == p {
 		s.movePsuedoDealer()
 	}
@@ -566,7 +573,7 @@ func findBestHand(psuedoDealer *player, communityCards []poker.Card) []*player {
 		}
 
 		pointer = pointer.nextInHand
-		if pointer == psuedoDealer {
+		if pointer == nil || pointer == psuedoDealer {
 			break
 		}
 	}

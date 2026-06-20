@@ -304,8 +304,8 @@ func (e *engine) showdown() {
 func (e *engine) pauseAfterShowdown() {
 	time.Sleep(config.AppConfig.PAUSE_MEDIUM)
 
-	// continue to pay sidepots until the pot is empty
-	if e.state.pot > 0 {
+	// continue to pay sidepots until the pot is empty or no players remain
+	if e.state.pot > 0 && e.state.psuedoDealer != nil {
 		e.transitionState(StateShowdown)
 	} else {
 		e.transitionState(StateEndHand)

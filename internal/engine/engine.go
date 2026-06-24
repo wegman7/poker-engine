@@ -141,6 +141,7 @@ func (e *engine) processSitCommand() {
 			err2 := e.state.addPlayer(p)
 			if err2 != nil {
 				log.Println("Error adding player: ", err2)
+				e.state.prevState = nil
 				continue
 			}
 		} else if command.EngineCommand == "leave" {

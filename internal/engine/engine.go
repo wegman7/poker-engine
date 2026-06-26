@@ -63,6 +63,7 @@ func (e *engine) run(stopEngine chan struct{}) {
 		default:
 			time.Sleep(config.AppConfig.ENGINE_LOOP_PAUSE)
 			e.tick()
+			e.state.checkInvariants(e.engineState)
 			e.sendState()
 		}
 	}
@@ -169,6 +170,7 @@ func (e *engine) processGameCommand() {
 }
 
 func (e *engine) startHand() {
+	e.state.chipsInHandTotal = e.state.totalChips()
 	if err := e.state.performDealerRotation(); err != nil {
 		log.Println("Error rotating dealer: ", err)
 		e.transitionState(StateProcessSitCommands)

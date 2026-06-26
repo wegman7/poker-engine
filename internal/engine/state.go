@@ -22,42 +22,44 @@ const (
 )
 
 type state struct {
-	smallBlind     float64
-	bigBlind       float64
-	timebankTotal  float64
-	players        map[string]*player
-	spotlight      *player
-	dealer         *player
-	psuedoDealer   *player
-	lastAggressor  *player
-	street         street
-	pot            float64
-	collectedPot   float64
-	currentBet     float64
-	minRaise	   float64
-	deck           *poker.Deck
-	communityCards []poker.Card
-	prevState      *state
+	smallBlind       float64
+	bigBlind         float64
+	timebankTotal    float64
+	players          map[string]*player
+	spotlight        *player
+	dealer           *player
+	psuedoDealer     *player
+	lastAggressor    *player
+	street           street
+	pot              float64
+	collectedPot     float64
+	currentBet       float64
+	minRaise         float64
+	deck             *poker.Deck
+	communityCards   []poker.Card
+	prevState        *state
+	chipsInHandTotal float64
 }
 
 func createState(smallBlind float64, bigBlind float64, timebankTotal float64) *state {
 	return &state{
-		smallBlind:     smallBlind,
-		bigBlind:       bigBlind,
-		timebankTotal:  timebankTotal,
-		players:        make(map[string]*player),
-		spotlight:      nil,
-		dealer:         nil,
-		psuedoDealer:   nil,
-		lastAggressor:  nil,
-		street:         BetweenHands,
-		pot:            0.0,
-		collectedPot:   0.0,
-		currentBet:     0.0,
-		minRaise:		0.0,
-		deck:           nil,
-		communityCards: nil,
-		prevState:      nil,
+		smallBlind:       smallBlind,
+		bigBlind:         bigBlind,
+		timebankTotal:    timebankTotal,
+		players:          make(map[string]*player),
+		spotlight:        nil,
+		dealer:           nil,
+		psuedoDealer:     nil,
+		lastAggressor:    nil,
+		street:           BetweenHands,
+		pot:              0.0,
+		collectedPot:     0.0,
+		currentBet:       0.0,
+		minRaise:         0.0,
+		deck:             nil,
+		communityCards:   nil,
+		prevState:        nil,
+		chipsInHandTotal: 0.0,
 	}
 }
 
@@ -68,17 +70,18 @@ func (s *state) copy() *state {
     }
 
     return &state{
-        smallBlind:     s.smallBlind,
-        bigBlind:       s.bigBlind,
-        timebankTotal:  s.timebankTotal,
-        players:        copiedPlayers,
-        spotlight:      s.spotlight,
-        dealer:         s.dealer,
-        psuedoDealer:   s.psuedoDealer,
-        lastAggressor:  s.lastAggressor,
-        street:         s.street,
-        pot:            s.pot,
-        communityCards: append([]poker.Card{}, s.communityCards...),
+        smallBlind:       s.smallBlind,
+        bigBlind:         s.bigBlind,
+        timebankTotal:    s.timebankTotal,
+        players:          copiedPlayers,
+        spotlight:        s.spotlight,
+        dealer:           s.dealer,
+        psuedoDealer:     s.psuedoDealer,
+        lastAggressor:    s.lastAggressor,
+        street:           s.street,
+        pot:              s.pot,
+        communityCards:   append([]poker.Card{}, s.communityCards...),
+        chipsInHandTotal: s.chipsInHandTotal,
     }
 }
 
@@ -218,6 +221,107 @@ func (s *state) resetState() {
 	s.minRaise = 0.0
 	s.pot = 0.0
 	s.collectedPot = 0.0
+	s.chipsInHandTotal = 0.0
+}
+
+func (s *state) totalChips() float64 {
+	total := s.pot
+	for _, p := range s.players {
+		total += p.chips
+	}
+	return total
+}
+
+func (s *state) checkInvariants(engineState engineState) {
+	// Chip conservation during a hand
+	if s.chipsInHandTotal > 0 {
+		got := s.totalChips()
+		if math.Abs(got-s.chipsInHandTotal) > 0.001 {
+			log.Fatalf("INVARIANT: chip conservation violated: expected=%.4f got=%.4f", s.chipsInHandTotal, got)
+		}
+	}
+
+	// No negative chips or pot values
+	for user, p := range s.players {
+		if p.chips < 0 {
+			log.Fatalf("INVARIANT: player %s has negative chips: %.4f", user, p.chips)
+		}
+		if p.chipsInPot < 0 {
+			log.Fatalf("INVARIANT: player %s has negative chipsInPot: %.4f", user, p.chipsInPot)
+		}
+	}
+	if s.pot < 0 {
+		log.Fatalf("INVARIANT: pot is negative: %.4f", s.pot)
+	}
+	if s.collectedPot < 0 {
+		log.Fatalf("INVARIANT: collectedPot is negative: %.4f", s.collectedPot)
+	}
+
+	// Community cards must be 0, 3, 4, or 5
+	n := len(s.communityCards)
+	if n != 0 && n != 3 && n != 4 && n != 5 {
+		log.Fatalf("INVARIANT: invalid community card count: %d", n)
+	}
+
+	// Dealer linked list length must equal player count
+	if s.dealer != nil {
+		count := 0
+		ptr := s.dealer
+		for {
+			count++
+			if count > len(s.players)+1 {
+				log.Fatalf("INVARIANT: dealer linked list longer than player count (broken cycle)")
+			}
+			ptr = ptr.next
+			if ptr == s.dealer {
+				break
+			}
+		}
+		if count != len(s.players) {
+			log.Fatalf("INVARIANT: dealer linked list length %d != player count %d", count, len(s.players))
+		}
+	}
+
+	// Spotlight must be valid and non-all-in during game command processing
+	if engineState == StateProcessGameCommands {
+		if s.spotlight == nil {
+			log.Fatalf("INVARIANT: spotlight is nil in StateProcessGameCommands")
+		}
+		if s.spotlight.isAllIn() {
+			log.Fatalf("INVARIANT: spotlight player %s is all-in in StateProcessGameCommands", s.spotlight.user)
+		}
+		if s.spotlight.nextInHand == nil {
+			log.Fatalf("INVARIANT: spotlight.nextInHand is nil in StateProcessGameCommands")
+		}
+	}
+
+	// All in-hand players must have exactly 2 hole cards after the deal
+	inHoleCardState := false
+	switch engineState {
+	case StateProcessGameCommands,
+		StatePauseAfterEveryoneFolded,
+		StateEveryoneFoldedPayout,
+		StatePauseAfterEveryoneFoldedPayout,
+		StateEndStreet,
+		StatePauseAfterEndStreet,
+		StateShowdown,
+		StatePauseAfterShowdown,
+		StateDealStreet:
+		inHoleCardState = true
+	}
+	if inHoleCardState && s.psuedoDealer != nil {
+		ptr := s.psuedoDealer
+		for {
+			if len(ptr.holeCards) != 2 {
+				log.Fatalf("INVARIANT: player %s has %d hole cards (expected 2) in engineState %d",
+					ptr.user, len(ptr.holeCards), engineState)
+			}
+			ptr = ptr.nextInHand
+			if ptr == s.psuedoDealer {
+				break
+			}
+		}
+	}
 }
 
 func (s *state) sitoutBustedPlayers() error {

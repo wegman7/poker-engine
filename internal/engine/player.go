@@ -56,6 +56,7 @@ func (p *player) copy() *player {
         sittingOut:  p.sittingOut,
         chips:       p.chips,
         chipsInPot:  p.chipsInPot,
+        maxWin:      p.maxWin,
         timeBank:    p.timeBank,
         holeCards:   append([]poker.Card{}, p.holeCards...),
     }
@@ -86,15 +87,35 @@ func (p *player) sitIn(event *Event, e *engine, s *state) error {
 	return nil
 }
 
-// Add chips to the player's total
 func (p *player) fold(event *Event, e *engine, s *state) error {
 	if err := p.verifySpotlight(s); err != nil {
 		return err
 	}
 
+	nextPlayer := p.nextInHand
+	wasLastAggressor := s.lastAggressor == p
 	s.removePlayerInHand(p)
 	if s.isEveryoneFolded() {
 		e.transitionState(StatePauseAfterEveryoneFolded)
+		return nil
+	}
+	if wasLastAggressor {
+		s.lastAggressor = nextPlayer
+		for s.lastAggressor.isAllIn() {
+			s.lastAggressor = s.lastAggressor.nextInHand
+			if s.lastAggressor == nextPlayer {
+				e.transitionState(StateEndStreet)
+				return nil
+			}
+		}
+	}
+	// Can't use rotateSpotlight() here — p.nextInHand is nil after removePlayerInHand.
+	s.spotlight = nextPlayer
+	for s.spotlight.isAllIn() && s.spotlight != s.lastAggressor {
+		s.spotlight = s.spotlight.nextInHand
+	}
+	if s.spotlight.isAllIn() || (!wasLastAggressor && s.isStreetComplete()) {
+		e.transitionState(StateEndStreet)
 	}
 	return nil
 }

@@ -202,6 +202,7 @@ func (s *state) resetPlayers() {
 	for {
 		pointer.nextInHand = nil
 		pointer.holeCards = nil
+		pointer.maxWin = 0
 
 		pointer = pointer.next
 		if pointer == s.dealer {

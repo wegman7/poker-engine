@@ -331,7 +331,8 @@ func (e *engine) sendState() {
 		return
 	}
 
-	serializeState := createSerializeState(e.state, e.engineState == StateProcessSitCommands)
+	betweenHands := e.engineState == StateProcessSitCommands || e.state.street == BetweenHands
+	serializeState := createSerializeState(e.state, betweenHands)
 	responseMsg, err := json.Marshal(serializeState)
 	if err != nil {
 		return
